@@ -6,17 +6,17 @@
     "dev": "turbo dev",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "db:generate": "npm run generate -w @mergemind/database",
-    "db:migrate:dev": "npm run migrate:dev -w @mergemind/database",
-    "db:migrate:deploy": "npm run migrate:deploy -w @mergemind/database",
-    "db:push": "npm run push -w @mergemind/database",
-    "db:seed": "npm run seed -w @mergemind/database",
-    "db:studio": "npm run studio -w @mergemind/database",
-    "db:reset": "npm run reset -w @mergemind/database"
+    "db:generate": "dotenv -e .env -- npm run generate -w @mergemind/database",
+    "db:migrate:dev": "dotenv -e .env -- npm run migrate:dev -w @mergemind/database",
+    "db:migrate:deploy": "dotenv -e .env -- npm run migrate:deploy -w @mergemind/database",
+    "db:seed": "dotenv -e .env -- npm run seed -w @mergemind/database",
+    "db:studio": "dotenv -e .env -- npm run studio -w @mergemind/database",
+    "db:reset": "dotenv -e .env -- npm run reset -w @mergemind/database"
   },
   "devDependencies": {
-    "turbo": "latest",
-    "prettier": "^3.4.2"
+    "dotenv-cli": "^11.0.0",
+    "prettier": "^3.4.2",
+    "turbo": "latest"
   },
   "packageManager": "npm@10.8.2",
   "engines": {

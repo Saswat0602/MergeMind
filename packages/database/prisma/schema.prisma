@@ -12,6 +12,8 @@ datasource db {
 model User {
   id            String         @id @default(uuid())
   email         String         @unique
+  githubId      Int?           @unique
+  login         String?
   name          String?
   avatarUrl     String?
   organizations Organization[]
@@ -20,52 +22,93 @@ model User {
 }
 
 model Organization {
-  id           String       @id @default(uuid())
-  name         String
-  githubId     Int          @unique
-  users        User[]
-  repositories Repository[]
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id               String              @id @default(uuid())
+  name             String
+  githubId         Int                 @unique
+  installationId   Int?                @unique
+  avatarUrl        String?
+  users            User[]
+  repositories     Repository[]
+  installation     GitHubInstallation? @relation(fields: [installationId], references: [githubId])
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+}
+
+model GitHubInstallation {
+  id            String         @id @default(uuid())
+  githubId      Int            @unique // The installation_id from GitHub
+  accountName   String
+  accountType   String         // Organization or User
+  targetId      Int            // The ID of the org or user on GitHub
+  organizations Organization[]
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
 model Repository {
-  id             String         @id @default(uuid())
+  id             String           @id @default(uuid())
   name           String
-  fullName       String         @unique
-  githubId       Int            @unique
+  fullName       String           @unique
+  githubId       Int              @unique
+  defaultBranch  String           @default("main")
+  isPrivate      Boolean          @default(false)
+  isActive       Boolean          @default(true)
   organizationId String
-  organization   Organization   @relation(fields: [organizationId], references: [id])
+  organization   Organization     @relation(fields: [organizationId], references: [id])
   pullRequests   PullRequest[]
   rules          RepositoryRule[]
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  metrics        ReviewMetric[]
+  lastSyncedAt   DateTime         @default(now())
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 }
 
 model PullRequest {
-  id           String         @id @default(uuid())
-  number       Int
-  title        String
-  state        String
-  repositoryId String
-  repository   Repository     @relation(fields: [repositoryId], references: [id])
-  reviews      ReviewResult[]
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  id             String         @id @default(uuid())
+  number         Int
+  githubId       Int            @unique
+  title          String
+  state          String         // open, closed, merged
+  authorHandle   String?
+  baseBranch     String?
+  headBranch     String?
+  headSha        String?
+  htmlUrl        String?
+  repositoryId   String
+  repository     Repository     @relation(fields: [repositoryId], references: [id])
+  reviews        ReviewResult[]
+  jobs           AnalysisJob[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   @@unique([repositoryId, number])
+}
+
+model AnalysisJob {
+  id             String       @id @default(uuid())
+  pullRequestId  String
+  pullRequest    PullRequest  @relation(fields: [pullRequestId], references: [id])
+  status         String       // QUEUED, PROCESSING, COMPLETED, FAILED
+  step           String?      // FETCHING_DIFF, CHUNKING, AI_ANALYSIS, POSTING
+  workerId       String?
+  attempts       Int          @default(0)
+  error          String?      @db.Text
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 }
 
 model ReviewResult {
   id            String          @id @default(uuid())
   pullRequestId String
   pullRequest   PullRequest     @relation(fields: [pullRequestId], references: [id])
-  summary       String?
+  commitSha     String?
+  summary       String?         @db.Text
   severityScore Int?
+  status        String          @default("PENDING") // PENDING, COMPLETED, FAILED
+  error         String?         @db.Text
   comments      ReviewComment[]
   usageLogs     AiUsageLog[]
-  status        String          @default("PENDING") // PENDING, COMPLETED, FAILED
-  error         String?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 }
@@ -76,22 +119,27 @@ model ReviewComment {
   reviewResult   ReviewResult @relation(fields: [reviewResultId], references: [id])
   filePath       String
   lineNumber     Int
-  content        String
+  content        String       @db.Text
+  suggestion     String?      @db.Text // AI generated code fix
   severity       String       // HIGH, MEDIUM, LOW
-  type           String       // SECURITY, PERFORMANCE, STYLE, etc.
-  diffHunk       String?
+  type           String       // SECURITY, PERFORMANCE, STYLE
+  diffHunk       String?      @db.Text
+  externalId     String?      // GitHub Comment ID
   createdAt      DateTime     @default(now())
 }
 
 model RepositoryRule {
-  id           String     @id @default(uuid())
-  repositoryId String
-  repository   Repository @relation(fields: [repositoryId], references: [id])
-  name         String
-  pattern      String
-  isEnabled    Boolean    @default(true)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id             String     @id @default(uuid())
+  repositoryId   String
+  repository     Repository @relation(fields: [repositoryId], references: [id])
+  name           String
+  description    String?
+  pattern        String?    @db.Text
+  type           String     @default("AI") // REGEX, AI, LINT
+  config         Json?
+  isEnabled      Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 }
 
 model AiUsageLog {
@@ -106,4 +154,25 @@ model AiUsageLog {
   requestId        String?
   cost             Float?
   createdAt        DateTime      @default(now())
+}
+
+model ReviewMetric {
+  id             String     @id @default(uuid())
+  repositoryId   String
+  repository     Repository @relation(fields: [repositoryId], references: [id])
+  date           DateTime   @default(now())
+  highSeverity   Int        @default(0)
+  mediumSeverity Int        @default(0)
+  lowSeverity    Int        @default(0)
+  totalTokens    Int        @default(0)
+}
+
+model PromptTemplate {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  content   String   @db.Text
+  version   Int      @default(1)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

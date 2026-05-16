@@ -188,6 +188,7 @@ Avoid:
 - raw SQL unless necessary
 - unindexed queries
 - deeply nested relational queries
+- **NEVER use `prisma db push`. Always use `prisma migrate dev` for schema changes to preserve migration history.**
 
 ---
 
