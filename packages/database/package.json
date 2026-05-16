@@ -2,7 +2,8 @@
   "name": "@mergemind/database",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "generate": "prisma generate",
     "migrate:dev": "prisma migrate dev",
@@ -10,15 +11,18 @@
     "seed": "prisma db seed",
     "studio": "prisma studio",
     "reset": "prisma migrate reset --force",
-    "build": "npm run generate"
+    "build": "prisma generate && tsc"
   },
   "keywords": [],
   "author": "",
   "dependencies": {
-    "@prisma/client": "latest"
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "latest",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
     "@types/node": "^25.8.0",
+    "@types/pg": "^8.20.0",
     "prisma": "latest"
   }
 }
