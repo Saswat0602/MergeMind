@@ -9,7 +9,8 @@
     "migrate:deploy": "prisma migrate deploy",
     "seed": "prisma db seed",
     "studio": "prisma studio",
-    "reset": "prisma migrate reset --force"
+    "reset": "prisma migrate reset --force",
+    "build": "npm run generate"
   },
   "keywords": [],
   "author": "",

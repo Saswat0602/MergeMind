@@ -1,14 +1,13 @@
 # Base stage for pruning
-FROM node:20-alpine AS pruner
-RUN apk add --no-cache libc6-compat
+FROM node:20-slim AS pruner
+RUN apt-get update && apt-get install -y libc6
 RUN npm install -g turbo
 WORKDIR /app
 COPY . .
 RUN turbo prune @mergemind/dashboard --docker
 
 # Builder stage
-FROM node:20-alpine AS builder
-RUN apk add --no-cache libc6-compat
+FROM node:20-slim AS builder
 WORKDIR /app
 
 # Copy pruned workspace
@@ -19,10 +18,10 @@ RUN npm install
 # Build the project
 COPY --from=pruner /app/out/full/ .
 COPY turbo.json turbo.json
-RUN npx turbo build --filter=@mergemind/dashboard
+RUN npx turbo build --filter=@mergemind/dashboard...
 
 # Runner stage
-FROM node:20-alpine AS runner
+FROM node:20-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
