@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { BullModule } from '@nestjs/bullmq';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaService } from '@mergemind/database';
+import { GithubModule } from './github/github.module';
 
 @Module({
   imports: [
@@ -10,6 +12,15 @@ import { PrismaService } from '@mergemind/database';
       isGlobal: true,
       envFilePath: '../../.env',
     }),
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          url: configService.get<string>('REDIS_URL'),
+        },
+      }),
+    }),
+    GithubModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

@@ -29,7 +29,8 @@
     "@nestjs/bullmq": "latest",
     "bullmq": "latest",
     "dotenv": "latest",
-    "@mergemind/database": "*"
+    "@mergemind/database": "*",
+    "@mergemind/shared-types": "*"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
