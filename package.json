@@ -5,7 +5,14 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "db:generate": "npm run generate -w @mergemind/database",
+    "db:migrate:dev": "npm run migrate:dev -w @mergemind/database",
+    "db:migrate:deploy": "npm run migrate:deploy -w @mergemind/database",
+    "db:push": "npm run push -w @mergemind/database",
+    "db:seed": "npm run seed -w @mergemind/database",
+    "db:studio": "npm run studio -w @mergemind/database",
+    "db:reset": "npm run reset -w @mergemind/database"
   },
   "devDependencies": {
     "turbo": "latest",

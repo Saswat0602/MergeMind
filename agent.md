@@ -40,7 +40,7 @@ The AI agent must strictly follow these rules while generating code.
 - Next.js
 
 ## Monorepo
-- Turborepo OR Nx
+- Turborepo
 
 ---
 
@@ -54,6 +54,7 @@ The AI agent must strictly follow these rules while generating code.
   /ai-engine
 
 /packages
+  /database      (Prisma schema & shared service)
   /shared-types
   /shared-config
   /utils
@@ -353,6 +354,8 @@ Every service must:
 
 Use:
 - .env.example
+
+The monorepo uses a **global .env file** at the root. Apps should load this file using `dotenv` or equivalent.
 
 Never commit:
 - .env files
