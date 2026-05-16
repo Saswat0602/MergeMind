@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: mergemind-db
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: mergemind
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: mergemind-redis
+    restart: always
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: mergemind-api
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://root:root@db:5432/mergemind?schema=public
+      - REDIS_URL=redis://redis:6379
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    ports:
+      - '3000:3000'
+    depends_on:
+      - db
+      - redis
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
+    container_name: mergemind-dashboard
+    restart: always
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api:3000
+    ports:
+      - '3001:3001'
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  redis_data:

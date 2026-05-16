@@ -42,6 +42,12 @@ The AI agent must strictly follow these rules while generating code.
 ## Monorepo
 - Turborepo
 
+## Docker Strategy
+- Use **multi-stage builds** with `turbo prune` to minimize image size.
+- Use `node:alpine` as the base image for runtime.
+- Never include `node_modules` or `.git` in the final image (use `.dockerignore`).
+- Services should run as non-root users (`nestjs`, `nextjs`).
+
 ---
 
 # 3. Monorepo Structure

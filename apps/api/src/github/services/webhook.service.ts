@@ -100,7 +100,9 @@ export class WebhookService {
       },
     );
 
-    this.logger.log(`Queued analysis job for PR #${pull_request.number} in ${repository.full_name}`);
+    this.logger.log(
+      `Queued analysis job for PR #${pull_request.number} in ${repository.full_name}`,
+    );
 
     return { jobId: analysisJob.id };
   }
