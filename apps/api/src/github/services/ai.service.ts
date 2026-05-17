@@ -133,7 +133,6 @@ Analyze the diff and return the JSON review report.`;
               { role: 'system', content: systemPrompt },
               { role: 'user', content: userPrompt },
             ],
-            response_format: { type: 'json_object' },
             temperature: 0.1,
           }),
         });
@@ -172,6 +171,13 @@ Analyze the diff and return the JSON review report.`;
       if (match && match[1]) {
         cleanText = match[1].trim();
       }
+    }
+
+    // Direct JSON object boundary extraction (ignores thinking blocks or prefix text!)
+    const firstBrace = cleanText.indexOf('{');
+    const lastBrace = cleanText.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      cleanText = cleanText.substring(firstBrace, lastBrace + 1);
     }
 
     try {
