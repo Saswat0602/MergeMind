@@ -374,30 +374,55 @@ body {
 
 /* ─── Mobile ─────────────────────────────────────────────────── */
 @media (max-width: 768px) {
+  /* Shell */
   .app-sidebar { display: none; }
-  .app-sidebar.mobile-open {
-    display: flex;
-    width: 260px;
-  }
+  .app-sidebar.mobile-open { display: flex; width: 260px; }
   .app-main { margin-left: 0; }
   .topbar { display: flex; }
-  .page-content { padding: 16px; }
-  .page-header { flex-direction: column; align-items: flex-start; }
+
+  /* Page layout */
+  .page-content { padding: 14px 14px 24px; gap: 14px; }
+  .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .page-title { font-size: 17px; }
+  .page-subtitle { font-size: 12px; }
+
+  /* KPI cards: 2 per row on mobile */
+  .stat-card { padding: 14px 14px; }
+  .stat-value { font-size: 22px; }
+  .stat-label { font-size: 10px; }
+
+  /* Tabs: smaller, scrollable */
+  .tab-btn { padding: 7px 10px; font-size: 12px; }
+  .tab-list { -ms-overflow-style: none; scrollbar-width: none; }
+  .tab-list::-webkit-scrollbar { display: none; }
 
   /* PR table → card list on mobile */
   .pr-table-desktop { display: none; }
   .pr-card-list { display: flex; flex-direction: column; gap: 10px; }
 
-  /* Review page 2-col → stacked on mobile */
-  .review-grid {
-    grid-template-columns: 1fr !important;
-  }
-}
+  /* Settings forms 2-col → single col */
+  .settings-form-grid { grid-template-columns: 1fr !important; }
 
+  /* Review page 2-col → stacked on mobile */
+  .review-grid { grid-template-columns: 1fr !important; }
+
+
+  /* Usage log: hide desktop table, show mobile cards */
+  .usage-log-desktop { display: none !important; }
+  .usage-log-mobile { display: block !important; }
+
+  /* Data table: smaller padding on mobile */
+  .data-table th { padding: 8px 10px; font-size: 10px; }
+  .data-table td { padding: 10px 10px; font-size: 12px; }
+
+  /* Card padding reduction */
+  .card { border-radius: 8px; }
+}
 
 @media (min-width: 769px) {
   .pr-table-desktop { display: table; }
   .pr-card-list { display: none; }
+  .usage-log-mobile { display: none !important; }
 }
 
 /* ─── Animations ─────────────────────────────────────────────── */
