@@ -193,4 +193,101 @@ export class GithubService {
       throw error;
     }
   }
+
+  /**
+   * Applies an AI Suggested Code Fix directly onto the target repository's pull request branch (Phase 5).
+   */
+  async applyCommitPatch(
+    pullRequestId: string,
+    filePath: string,
+    suggestion: string,
+    lineNumber: number,
+  ): Promise<{ success: boolean; sha?: string; htmlUrl?: string }> {
+    const pr = await this.prisma.pullRequest.findUnique({
+      where: { id: pullRequestId },
+      include: {
+        repository: {
+          include: {
+            organization: true,
+          },
+        },
+      },
+    });
+
+    if (!pr) {
+      throw new Error(`PR record with ID ${pullRequestId} not found`);
+    }
+
+    const { repository } = pr;
+    const { organization } = repository;
+
+    if (!organization.installationId) {
+      throw new Error(`GitHub App Installation ID not found for repository ${repository.fullName}`);
+    }
+
+    const [owner, repo] = repository.fullName.split('/');
+    const branchName = pr.headBranch || 'main';
+
+    this.logger.log(`Applying AI Suggested patch on ${repository.fullName} branch ${branchName} file ${filePath} line ${lineNumber}`);
+
+    const octokit = await this.getAppOctokit(organization.installationId);
+
+    let fileSha: string;
+    let originalContent: string;
+    try {
+      const response = await octokit.rest.repos.getContent({
+        owner,
+        repo,
+        path: filePath,
+        ref: branchName,
+      });
+
+      if ('content' in response.data) {
+        fileSha = response.data.sha;
+        originalContent = Buffer.from(response.data.content, 'base64').toString('utf8');
+      } else {
+        throw new Error(`Path ${filePath} is not a valid text file`);
+      }
+    } catch (fetchError) {
+      this.logger.error(`Failed to fetch file ${filePath} from GitHub branch ${branchName}: ${fetchError.message}`);
+      throw new Error(`Failed to locate target file on GitHub: ${fetchError.message}`);
+    }
+
+    const lines = originalContent.split('\n');
+    if (lineNumber < 1 || lineNumber > lines.length) {
+      throw new Error(`Line number ${lineNumber} is out of bounds for file ${filePath} (total lines: ${lines.length})`);
+    }
+
+    let cleanSuggestion = suggestion.trim();
+    if (cleanSuggestion.includes('```')) {
+      const match = cleanSuggestion.match(/```[a-zA-Z0-9]*\n([\s\S]*?)```/);
+      if (match && match[1]) {
+        cleanSuggestion = match[1].trim();
+      }
+    }
+
+    lines[lineNumber - 1] = cleanSuggestion;
+    const updatedContent = lines.join('\n');
+
+    try {
+      const response = await octokit.rest.repos.createOrUpdateFileContents({
+        owner,
+        repo,
+        path: filePath,
+        message: `style(audit): Apply AI Suggested Hotfix on ${filePath} line ${lineNumber}`,
+        content: Buffer.from(updatedContent).toString('base64'),
+        sha: fileSha,
+        branch: branchName,
+      });
+
+      return {
+        success: true,
+        sha: response.data.commit.sha,
+        htmlUrl: response.data.commit.html_url,
+      };
+    } catch (commitError) {
+      this.logger.error(`GitHub commit update failed: ${commitError.message}`);
+      throw new Error(`GitHub branch commit rejected: ${commitError.message}`);
+    }
+  }
 }

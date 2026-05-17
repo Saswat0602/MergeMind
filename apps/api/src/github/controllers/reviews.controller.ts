@@ -1,9 +1,13 @@
-import { Controller, Get, Param, Query, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@mergemind/database';
+import { GithubService } from '../services/github.service';
 
 @Controller('dashboard')
 export class ReviewsController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly githubService: GithubService,
+  ) {}
 
   @Get('stats')
   async getStats() {
@@ -85,6 +89,7 @@ export class ReviewsController {
         latencyMs: log.latencyMs,
         cost: log.cost || 0.0,
         createdAt: log.createdAt,
+        actionDescription: log.actionDescription || 'Pull Request Review Audit',
         repositoryName: log.reviewResult?.pullRequest?.repository?.fullName || 'N/A',
         prTitle: log.reviewResult?.pullRequest?.title || 'N/A',
         prNumber: log.reviewResult?.pullRequest?.number || 0,
@@ -183,5 +188,32 @@ export class ReviewsController {
     }
 
     return pr;
+  }
+
+  @Post('commit/apply-fix')
+  async applyFix(
+    @Body()
+    body: {
+      pullRequestId: string;
+      filePath: string;
+      suggestion: string;
+      lineNumber: number;
+    },
+  ) {
+    if (!body.pullRequestId || !body.filePath || !body.suggestion || !body.lineNumber) {
+      throw new NotFoundException('Missing required fields for applying suggested commit patch');
+    }
+
+    try {
+      const result = await this.githubService.applyCommitPatch(
+        body.pullRequestId,
+        body.filePath,
+        body.suggestion,
+        body.lineNumber,
+      );
+      return result;
+    } catch (err) {
+      throw new NotFoundException(`Failed to apply suggested commit patch: ${err.message}`);
+    }
   }
 }

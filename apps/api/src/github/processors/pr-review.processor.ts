@@ -122,11 +122,13 @@ export class PrReviewProcessor extends WorkerHost {
       });
 
       // 4. Run AI Analysis via OpenRouter
-      const { response: aiResult, promptTokens, completionTokens, latencyMs, modelUsed } = 
-        await this.aiService.analyzeDiff(reviewTitle, '', diff);
-
-      // Calculate cost
-      const cost = (promptTokens * 0.15 + completionTokens * 0.60) / 1000000;
+      const { response: aiResult, promptTokens, completionTokens, latencyMs, modelUsed, logIds } = 
+        await this.aiService.analyzeDiff(
+          reviewTitle,
+          '',
+          diff,
+          isPushEvent ? `Push Commit Audit: "${commitMessage || 'No Message'}"` : `PR #${prNumber} Review Audit`
+        );
 
       // 5. Update job step to POSTING
       await this.prisma.analysisJob.update({
@@ -160,14 +162,7 @@ export class PrReviewProcessor extends WorkerHost {
             })),
           },
           usageLogs: {
-            create: {
-              modelName: modelUsed,
-              promptTokens,
-              completionTokens,
-              totalTokens: promptTokens + completionTokens,
-              latencyMs,
-              cost,
-            },
+            connect: logIds.map(id => ({ id })),
           },
         },
         include: {

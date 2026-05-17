@@ -5,6 +5,7 @@ import { ReviewsController } from './controllers/reviews.controller';
 import { WebhookService } from './services/webhook.service';
 import { GithubService } from './services/github.service';
 import { AiService } from './services/ai.service';
+import { ScrubberService } from './services/scrubber.service';
 import { PrReviewProcessor } from './processors/pr-review.processor';
 import { PrismaService } from '@mergemind/database';
 
@@ -19,6 +20,7 @@ import { PrismaService } from '@mergemind/database';
     WebhookService,
     GithubService,
     AiService,
+    ScrubberService,
     PrReviewProcessor,
     PrismaService,
   ],

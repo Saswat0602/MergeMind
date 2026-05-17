@@ -20,6 +20,7 @@ interface UsageLog {
   totalTokens: number;
   latencyMs: number;
   cost: number;
+  actionDescription?: string;
 }
 
 interface Review {
@@ -52,6 +53,12 @@ export default function ReviewReportPage({ params }: { params: Promise<{ id: str
   const [pr, setPr] = useState<PRDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'ALL' | 'SECURITY' | 'PERFORMANCE' | 'STYLE' | 'DIFF'>('ALL');
+
+  // Interactive Code Sandbox States
+  const [editedSuggestions, setEditedSuggestions] = useState<Record<string, string>>({});
+  const [applyingFixId, setApplyingFixId] = useState<string | null>(null);
+  const [applySuccessId, setApplySuccessId] = useState<string | null>(null);
+  const [applyError, setApplyError] = useState<Record<string, string>>({});
 
   const fetchPRDetails = async () => {
     try {
@@ -94,7 +101,7 @@ index b312ad9..fa3a21c 100644
 +++ b/apps/api/src/auth/auth.service.ts
 @@ -71,9 +71,9 @@ export class AuthService {
    }
- 
+
    async validateSession(token: string) {
 -    // TODO: Vulnerability here
 -    const session = await this.prisma.$queryRawUnsafe(
@@ -105,7 +112,7 @@ index b312ad9..fa3a21c 100644
 +      where: { token },
 +    });
    }
- 
+
    async validateUser(email: string, pass: string): Promise<any> {
 diff --git a/apps/api/src/auth/jwt.strategy.ts b/apps/api/src/auth/jwt.strategy.ts
 index e3a11f2..c2e11d1 100644
@@ -119,12 +126,13 @@ index e3a11f2..c2e11d1 100644
    }`,
           usageLogs: [
             {
-              modelName: 'qwen/qwen-2.5-coder-32b-instruct',
+              modelName: 'deepseek/deepseek-v4-flash:free',
               promptTokens: 4250,
               completionTokens: 820,
               totalTokens: 5070,
               latencyMs: 3420,
               cost: 0.0011,
+              actionDescription: 'PR Review Audit'
             }
           ],
           comments: [
@@ -174,6 +182,58 @@ index e3a11f2..c2e11d1 100644
     fetchPRDetails();
   }, [resolvedParams.id]);
 
+  // Sync suggestion changes
+  useEffect(() => {
+    if (pr?.reviews[0]?.comments) {
+      const initial: Record<string, string> = {};
+      pr.reviews[0].comments.forEach(c => {
+        if (c.suggestion) {
+          initial[c.id] = c.suggestion;
+        }
+      });
+      setEditedSuggestions(prev => ({ ...initial, ...prev }));
+    }
+  }, [pr]);
+
+  const handleApplyCommit = async (
+    commentId: string,
+    filePath: string,
+    lineNumber: number,
+  ) => {
+    if (!pr) return;
+    const currentSuggestion = editedSuggestions[commentId];
+    if (!currentSuggestion) return;
+
+    setApplyingFixId(commentId);
+    setApplyError(prev => ({ ...prev, [commentId]: '' }));
+
+    try {
+      const response = await fetch('/api/dashboard/commit/apply-fix', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pullRequestId: pr.id,
+          filePath,
+          suggestion: currentSuggestion,
+          lineNumber,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to patch branch on GitHub');
+      }
+
+      setApplySuccessId(commentId);
+    } catch (err: any) {
+      setApplyError(prev => ({ ...prev, [commentId]: err.message || 'Unexpected server rejection' }));
+    } finally {
+      setApplyingFixId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#070913] text-slate-100 flex-col gap-4">
@@ -197,7 +257,7 @@ index e3a11f2..c2e11d1 100644
 
   const latestReview = pr.reviews[0];
   const comments = latestReview.comments;
-  const usage = latestReview.usageLogs[0];
+  const usageLogs = latestReview.usageLogs || [];
 
   const filteredComments = activeTab === 'ALL' 
     ? comments 
@@ -318,8 +378,7 @@ index e3a11f2..c2e11d1 100644
           <div className={`glass-card p-6 flex flex-col items-center text-center gap-4 border border-white/5 bg-slate-900/10 rounded-xl shadow-lg`}>
             <span className="text-xs uppercase font-extrabold text-slate-400 tracking-wider">Severity Threat Rating</span>
             <div className="relative flex items-center justify-center mt-2">
-              {/* Radial Glow Meter */}
-              <div className={`w-32 h-32 rounded-full border-[8px] border-slate-800/50 flex flex-col items-center justify-center ${getScoreBadgeColor(latestReview.severityScore)}`}>
+              <div className={`w-32 h-32 rounded-full border-[8px] border-[#0a0c16] flex flex-col items-center justify-center ${getScoreBadgeColor(latestReview.severityScore)} shadow-[0_0_20px_rgba(99,102,241,0.1)]`}>
                 <span className="text-3xl font-black">{latestReview.severityScore}</span>
                 <span className="text-[10px] uppercase font-bold text-slate-400">/ 100</span>
               </div>
@@ -342,28 +401,35 @@ index e3a11f2..c2e11d1 100644
           </div>
 
           {/* AI token usage metadata */}
-          {usage && (
+          {usageLogs.length > 0 && (
             <div className="glass-card p-6 flex flex-col gap-4 border border-white/5 bg-slate-900/10 rounded-xl shadow-lg">
               <span className="text-xs uppercase font-extrabold text-slate-400 tracking-wider">Diagnostic Performance logs</span>
               
-              <div className="flex flex-col gap-3 text-xs">
-                <div className="flex justify-between border-b border-slate-800/30 pb-2">
-                  <span className="text-slate-500 font-medium">LLM Model:</span>
-                  <span className="font-mono text-slate-300">{usage.modelName}</span>
+              {usageLogs.map((usage, idx) => (
+                <div key={idx} className="flex flex-col gap-3 text-xs border-b border-white/5 pb-4 last:border-b-0 last:pb-0">
+                  {usage.actionDescription && (
+                    <div className="text-[10px] font-black uppercase text-indigo-400 tracking-wider mb-1">
+                      {usage.actionDescription}
+                    </div>
+                  )}
+                  <div className="flex justify-between border-b border-slate-800/30 pb-2">
+                    <span className="text-slate-500 font-medium">LLM Model:</span>
+                    <span className="font-mono text-slate-300">{usage.modelName}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-slate-800/30 pb-2">
+                    <span className="text-slate-500 font-medium">Latency Speed:</span>
+                    <span className="text-slate-300 font-semibold">{(usage.latencyMs / 1000).toFixed(2)}s</span>
+                  </div>
+                  <div className="flex justify-between border-b border-slate-800/30 pb-2">
+                    <span className="text-slate-500 font-medium">Token Footprint:</span>
+                    <span className="text-slate-300 font-semibold">{usage.totalTokens.toLocaleString()} tokens</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-medium">OpenRouter Spend:</span>
+                    <span className="text-violet-400 font-bold">${(usage.cost || 0).toFixed(4)}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between border-b border-slate-800/30 pb-2">
-                  <span className="text-slate-500 font-medium">Latency Speed:</span>
-                  <span className="text-slate-300 font-semibold">{(usage.latencyMs / 1000).toFixed(2)}s</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-800/30 pb-2">
-                  <span className="text-slate-500 font-medium">Token Footprint:</span>
-                  <span className="text-slate-300 font-semibold">{usage.totalTokens.toLocaleString()} tokens</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-medium">OpenRouter Spend:</span>
-                  <span className="text-violet-400 font-bold">${usage.cost.toFixed(4)}</span>
-                </div>
-              </div>
+              ))}
             </div>
           )}
 
@@ -445,24 +511,114 @@ index e3a11f2..c2e11d1 100644
                       {c.content}
                     </p>
 
-                    {/* Commit suggestion block */}
+                    {/* Interactive Code Sandbox Panel (Phase 6) */}
                     {c.suggestion && (
-                      <div className="flex flex-col gap-2 mt-2">
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Suggested Fix</span>
-                        <div className="rounded-lg overflow-hidden border border-slate-800 font-mono text-xs bg-slate-950/80">
-                          <div className="flex justify-between items-center bg-slate-900/60 px-4 py-2 border-b border-slate-800 text-[10px] font-bold text-slate-500">
-                            <span>REPLACEMENT CODE block</span>
-                            <button
-                              onClick={() => navigator.clipboard.writeText(c.suggestion || '')}
-                              className="hover:text-white transition"
-                              title="Copy code"
-                            >
-                              Copy Suggestion
-                            </button>
+                      <div className="flex flex-col gap-3 mt-4">
+                        <div className="flex justify-between items-center px-1">
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <span className="inline-block w-2.5 h-2.5 rounded-full bg-violet-500 animate-pulse"></span>
+                            Interactive Sandbox Code Editor
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-mono">Tweak suggested fix manually</span>
+                        </div>
+
+                        <div className="rounded-xl overflow-hidden border border-white/10 bg-[#090b14]/90 font-mono text-xs leading-6 shadow-2xl relative">
+                          {/* Sandbox Header */}
+                          <div className="flex justify-between items-center bg-[#0e111c] px-4 py-3 border-b border-white/5 text-[10px] font-bold text-slate-400">
+                            <div className="flex items-center gap-2">
+                              <span className="flex gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
+                                <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></span>
+                              </span>
+                              <span className="border-l border-white/10 pl-2.5 ml-1 text-slate-500">sandbox.tsx</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(editedSuggestions[c.id] || '');
+                                }}
+                                className="hover:text-white transition flex items-center gap-1 text-slate-500 font-bold"
+                                title="Copy edited code"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                </svg>
+                                Copy
+                              </button>
+                            </div>
                           </div>
-                          <pre className="p-4 overflow-x-auto text-slate-300 leading-5">
-                            <code>{c.suggestion}</code>
-                          </pre>
+
+                          {/* Code Editor Body */}
+                          <div className="flex min-h-[120px] max-h-[350px] overflow-y-auto">
+                            {/* Line Numbers */}
+                            <div className="select-none bg-[#0a0d16] text-[#334155] text-right px-3.5 py-4 border-r border-white/5 font-mono text-[11px] leading-5 flex flex-col">
+                              {((editedSuggestions[c.id] || '').split('\n')).map((_, index) => (
+                                <span key={index}>{index + 1}</span>
+                              ))}
+                            </div>
+                            {/* Editable Text Area */}
+                            <textarea
+                              value={editedSuggestions[c.id] || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setEditedSuggestions(prev => ({ ...prev, [c.id]: val }));
+                              }}
+                              className="flex-1 w-full bg-transparent text-slate-100 font-mono text-[11px] leading-5 p-4 outline-none resize-none border-none focus:ring-0 placeholder-slate-600 min-h-[120px]"
+                              style={{ whiteSpace: 'pre', overflowX: 'auto' }}
+                              spellCheck="false"
+                            />
+                          </div>
+
+                          {/* Commit Actions Panel */}
+                          <div className="bg-[#0b0e18] px-4 py-3 border-t border-white/5 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
+                            <span className="text-[10px] text-slate-500 font-mono flex items-center gap-1">
+                              <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              Will push directly to branch `{latestReview.branchName || 'main'}`
+                            </span>
+                            <div className="flex items-center gap-3 justify-end">
+                              {applySuccessId === c.id ? (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  Hotfix Pushed!
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => handleApplyCommit(c.id, c.filePath, c.lineNumber)}
+                                  disabled={applyingFixId === c.id}
+                                  className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-black transition-all border ${
+                                    applyingFixId === c.id
+                                      ? 'bg-indigo-600/40 text-indigo-300 border-indigo-500/30 cursor-not-allowed'
+                                      : 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-500/40 hover:border-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:shadow-[0_0_20px_rgba(99,102,241,0.5)] cursor-pointer'
+                                  }`}
+                                >
+                                  {applyingFixId === c.id ? (
+                                    <>
+                                      <div className="w-3.5 h-3.5 rounded-full border-2 border-indigo-400/20 border-t-indigo-200 animate-spin"></div>
+                                      Applying Hotfix...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                      </svg>
+                                      Apply Commit
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {applyError[c.id] && (
+                            <div className="bg-rose-500/10 px-4 py-2.5 border-t border-rose-500/20 text-[10px] font-semibold text-rose-400">
+                              Error: {applyError[c.id]}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}

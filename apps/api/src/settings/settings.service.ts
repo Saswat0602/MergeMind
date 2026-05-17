@@ -135,6 +135,7 @@ export class SettingsService {
       throw new BadRequestException('No OpenRouter API key provided or saved');
     }
 
+    const startTime = Date.now();
     try {
       this.logger.log('Testing OpenRouter connection status...');
       const response = await fetch('https://openrouter.ai/api/v1/auth/key', {
@@ -144,9 +145,24 @@ export class SettingsService {
         },
       });
 
+      const latencyMs = Date.now() - startTime;
+
       if (!response.ok) {
         const errorText = await response.text();
         this.logger.error(`OpenRouter connection test failed with status ${response.status}: ${errorText}`);
+
+        await this.prisma.aiUsageLog.create({
+          data: {
+            modelName: 'OpenRouter API Key Handshake',
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+            latencyMs,
+            cost: 0,
+            actionDescription: `API Key Connection Failed: Handshake status ${response.status}`,
+          },
+        });
+
         return {
           success: false,
           message: `Authentication failed (Status ${response.status}): Key is invalid or expired.`,
@@ -154,12 +170,39 @@ export class SettingsService {
       }
 
       const result = await response.json();
+
+      await this.prisma.aiUsageLog.create({
+        data: {
+          modelName: 'OpenRouter API Key Handshake',
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+          latencyMs,
+          cost: 0,
+          actionDescription: `API Key Connection Success: Handshake completed (Limit: $${result.data?.limit ?? 'unlimited'})`,
+        },
+      });
+
       return {
         success: true,
         message: `Success! Connection verified. Key is active. (Limit: $${result.data?.limit ?? 'unlimited'})`,
       };
     } catch (error) {
+      const latencyMs = Date.now() - startTime;
       this.logger.error(`OpenRouter connection test encountered network error: ${error.message}`);
+
+      await this.prisma.aiUsageLog.create({
+        data: {
+          modelName: 'OpenRouter API Key Handshake',
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+          latencyMs,
+          cost: 0,
+          actionDescription: `API Key Connection Error: ${error.message}`,
+        },
+      });
+
       return {
         success: false,
         message: `Connection error: Unable to contact OpenRouter API. ${error.message}`,

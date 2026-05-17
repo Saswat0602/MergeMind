@@ -31,6 +31,7 @@ export default function AISettingsPage() {
 Adopt a clean, direct, and constructive technical persona. Offer actionable, production-grade refactored code blocks in your responses.`
   );
   const [bypassSignature, setBypassSignature] = useState(true);
+  const [isConsensusEnabled, setIsConsensusEnabled] = useState(false);
 
   // GitHub state
   const [gitHubAppId, setGitHubAppId] = useState('');
@@ -81,6 +82,7 @@ Adopt a clean, direct, and constructive technical persona. Offer actionable, pro
           if (data.maxTokens !== undefined) setMaxTokens(data.maxTokens);
           if (data.systemPrompt) setSystemPrompt(data.systemPrompt);
           if (data.bypassSignature !== undefined) setBypassSignature(data.bypassSignature);
+          if (data.isConsensusEnabled !== undefined) setIsConsensusEnabled(data.isConsensusEnabled);
         }
 
         if (ghRes.ok) {
@@ -229,6 +231,7 @@ Adopt a clean, direct, and constructive technical persona. Offer actionable, pro
           systemPrompt,
           bypassSignature,
           isFallbackEnabled: true,
+          isConsensusEnabled,
         }),
       });
 
@@ -517,6 +520,20 @@ Adopt a clean, direct, and constructive technical persona. Offer actionable, pro
                     className={`w-10 h-6 rounded-full p-0.5 transition-colors duration-300 focus:outline-none ${bypassSignature ? 'bg-violet-500' : 'bg-slate-800'}`}
                   >
                     <div className={`w-5 h-5 rounded-full bg-white transition-transform duration-300 shadow-md ${bypassSignature ? 'translate-x-4' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+
+                <div className="flex justify-between items-center bg-black/20 p-4 border border-slate-800/80 rounded-lg">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-bold text-white">Dual-Model Consensus Auditing</span>
+                    <span className="text-[10px] text-slate-400">Run two LLM models concurrently to deduplicate findings</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsConsensusEnabled(!isConsensusEnabled)}
+                    className={`w-10 h-6 rounded-full p-0.5 transition-colors duration-300 focus:outline-none ${isConsensusEnabled ? 'bg-violet-500' : 'bg-slate-800'}`}
+                  >
+                    <div className={`w-5 h-5 rounded-full bg-white transition-transform duration-300 shadow-md ${isConsensusEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
                   </button>
                 </div>
 

@@ -156,6 +156,7 @@ model AiUsageLog {
   latencyMs        Int
   requestId        String?
   cost             Float?
+  actionDescription String?      @db.Text
   createdAt        DateTime      @default(now())
 }
 
@@ -186,6 +187,7 @@ model AiSettings {
   defaultModel      String   @default("deepseek/deepseek-v4-flash:free")
   fallbackModel     String   @default("arcee-ai/trinity-large-thinking:free")
   isFallbackEnabled Boolean  @default(true)
+  isConsensusEnabled Boolean @default(false)
   temperature       Float    @default(0.1)
   maxTokens         Int      @default(2048)
   systemPrompt      String   @default("You are an elite, highly specialized AI code auditor. Analyze the pull request diff for:\n1. Critical security bugs and OWASP vulnerabilities.\n2. Major execution hotpaths and latency bottlenecks.\n3. Logical deadlocks, edge cases, and standard cleanups.\n\nAdopt a clean, direct, and constructive technical persona. Offer actionable, production-grade refactored code blocks in your responses.") @db.Text
