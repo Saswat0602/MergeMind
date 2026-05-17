@@ -6,73 +6,91 @@ interface UsageLogsTableProps {
 
 export function UsageLogsTable({ logs }: UsageLogsTableProps) {
   return (
-    <div className="rounded-2xl bg-slate-950/20 border border-white/5 overflow-hidden backdrop-blur-xl">
-      <div className="border-b border-white/5 px-6 py-4 bg-slate-950/30 flex justify-between items-center">
-        <h2 className="text-lg font-semibold text-white">Execution Logs</h2>
+    <div className="card" style={{ overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{
+        padding: '14px 16px',
+        borderBottom: '1px solid var(--border)',
+      }}>
+        <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+          Execution Logs
+        </h2>
+        <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
+          Per-request AI token and cost breakdown
+        </p>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+      {/* Table */}
+      <div style={{ overflowX: 'auto' }}>
+        <table className="data-table">
           <thead>
-            <tr className="border-b border-white/5 bg-slate-950/10 text-xs font-semibold uppercase tracking-wider text-indigo-200/40">
-              <th className="px-6 py-4">Trigger / Context</th>
-              <th className="px-6 py-4">Model Used</th>
-              <th className="px-6 py-4 text-right">Tokens Used</th>
-              <th className="px-6 py-4 text-right">Latency</th>
-              <th className="px-6 py-4 text-right">Accrued Cost</th>
-              <th className="px-6 py-4 text-right">Time</th>
+            <tr>
+              <th style={{ paddingLeft: 16 }}>Trigger / Context</th>
+              <th>Model</th>
+              <th style={{ textAlign: 'right' }}>Tokens</th>
+              <th style={{ textAlign: 'right' }}>Latency</th>
+              <th style={{ textAlign: 'right' }}>Cost</th>
+              <th style={{ textAlign: 'right', paddingRight: 16 }}>Time</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5 text-sm">
+          <tbody>
             {logs.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-indigo-200/30">
-                  No AI usage logs recorded yet. Push a commit or create a PR to start analyzing!
+                <td
+                  colSpan={6}
+                  style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-secondary)' }}
+                >
+                  No logs yet. Push a commit or open a PR to start.
                 </td>
               </tr>
             ) : (
-              logs.map(log => (
-                <tr key={log.id} className="hover:bg-white/[0.02] transition-colors duration-200">
-                  <td className="px-6 py-4 max-w-sm">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="font-semibold text-white">{log.prTitle}</span>
-                      <div className="flex items-center gap-1.5 text-xs text-indigo-200/40 font-mono">
-                        <span className="text-indigo-400/80 font-medium">{log.repositoryName}</span>
-                        <span>•</span>
-                        <span>
-                          {log.prNumber < 0 
-                            ? 'Branch Push' 
-                            : log.prNumber === 0 
-                              ? (log.actionDescription?.includes('Handshake') ? 'Self-Test' : 'System Log') 
-                              : `PR #${log.prNumber}`}
-                        </span>
+              logs.map(log => {
+                const contextLabel =
+                  log.prNumber < 0
+                    ? 'Branch Push'
+                    : log.prNumber === 0
+                      ? (log.actionDescription?.includes('Handshake') ? 'Self-Test' : 'System Log')
+                      : `PR #${log.prNumber}`;
+
+                return (
+                  <tr key={log.id}>
+                    <td style={{ paddingLeft: 16, maxWidth: 280 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {log.prTitle}
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="px-2 py-0.5 text-xs bg-slate-900 border border-slate-800 rounded font-mono text-purple-300">
-                      {log.modelName}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right font-mono font-medium">
-                    <div className="flex flex-col items-end gap-0.5">
-                      <span className="text-white">{log.totalTokens.toLocaleString()}</span>
-                      <span className="text-[10px] text-indigo-200/30">
-                        P: {log.promptTokens.toLocaleString()} | C: {log.completionTokens.toLocaleString()}
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, fontFamily: 'monospace' }}>
+                        {log.repositoryName} · {contextLabel}
+                      </div>
+                    </td>
+                    <td>
+                      <span style={{
+                        fontFamily: 'monospace', fontSize: 11,
+                        background: 'var(--bg-elevated)',
+                        border: '1px solid var(--border-soft)',
+                        borderRadius: 4, padding: '2px 7px',
+                        color: '#c084fc',
+                      }}>
+                        {log.modelName}
                       </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-right font-mono text-indigo-200/60">
-                    {((log.latencyMs || 0) / 1000).toFixed(2)}s
-                  </td>
-                  <td className="px-6 py-4 text-right font-mono text-green-400 font-semibold">
-                    ${log.cost.toFixed(5)}
-                  </td>
-                  <td className="px-6 py-4 text-right text-indigo-200/40 text-xs">
-                    {new Date(log.createdAt).toLocaleString()}
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    <td style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: 12 }}>
+                      <div style={{ fontWeight: 600 }}>{log.totalTokens.toLocaleString()}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                        P:{log.promptTokens.toLocaleString()} C:{log.completionTokens.toLocaleString()}
+                      </div>
+                    </td>
+                    <td style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: 12, color: 'var(--text-secondary)' }}>
+                      {((log.latencyMs || 0) / 1000).toFixed(2)}s
+                    </td>
+                    <td style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: 12, color: '#34d399', fontWeight: 600 }}>
+                      ${log.cost.toFixed(5)}
+                    </td>
+                    <td style={{ textAlign: 'right', paddingRight: 16, fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                      {new Date(log.createdAt).toLocaleString()}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

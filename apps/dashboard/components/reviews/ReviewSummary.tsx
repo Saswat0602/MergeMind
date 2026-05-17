@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { Review, UsageLog } from '../../types';
 
 interface ReviewSummaryProps {
@@ -6,70 +5,94 @@ interface ReviewSummaryProps {
   usageLogs: UsageLog[];
 }
 
+function ScoreRing({ score }: { score: number }) {
+  const color =
+    score > 70 ? '#ef4444' :
+    score > 30 ? '#f59e0b' :
+    '#10b981';
+
+  const label =
+    score > 70 ? 'Critical — merge blocked' :
+    score > 30 ? 'Moderate — review recommended' :
+    'Clean — safe to merge';
+
+  return (
+    <div className="card" style={{ padding: '20px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+      <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-secondary)' }}>
+        Severity Score
+      </div>
+      {/* Score ring */}
+      <div style={{
+        width: 96, height: 96, borderRadius: '50%',
+        border: `5px solid ${color}`,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        background: `${color}12`,
+      }}>
+        <span style={{ fontSize: 28, fontWeight: 700, color, lineHeight: 1 }}>{score}</span>
+        <span style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>/ 100</span>
+      </div>
+      <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '8px 0', borderBottom: '1px solid var(--border)',
+      fontSize: 12,
+    }}>
+      <span style={{ color: 'var(--text-secondary)' }}>{label}</span>
+      <span style={{ color: 'var(--text-primary)', fontFamily: 'monospace', fontWeight: 500 }}>{value}</span>
+    </div>
+  );
+}
+
 export function ReviewSummary({ latestReview, usageLogs }: ReviewSummaryProps) {
   if (!latestReview) return null;
 
-  const getScoreBadgeColor = (score: number) => {
-    if (score > 70) return 'text-rose-500 bg-rose-500/10 border-rose-500/30';
-    if (score > 30) return 'text-amber-500 bg-amber-500/10 border-amber-500/30';
-    return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30';
-  };
-
   return (
-    <div className="lg:col-span-4 flex flex-col gap-8">
-      {/* Diagnostic score */}
-      <div className="glass-card p-6 flex flex-col items-center text-center gap-4 border border-white/5 bg-slate-900/10 rounded-xl shadow-lg">
-        <span className="text-xs uppercase font-extrabold text-slate-400 tracking-wider">Severity Threat Rating</span>
-        <div className="relative flex items-center justify-center mt-2">
-          <div className={`w-32 h-32 rounded-full border-[8px] border-[#0a0c16] flex flex-col items-center justify-center ${getScoreBadgeColor(latestReview.severityScore)} shadow-[0_0_20px_rgba(99,102,241,0.1)]`}>
-            <span className="text-3xl font-black">{latestReview.severityScore}</span>
-            <span className="text-[10px] uppercase font-bold text-slate-400">/ 100</span>
-          </div>
-        </div>
-        <p className="text-xs text-slate-400 leading-5">
-          {latestReview.severityScore > 70 
-            ? 'CRITICAL WARNING: Highly dangerous code patterns detected. Secure prior to merge.' 
-            : latestReview.severityScore > 30 
-              ? 'MODERATE: Non-blocking performance bugs or minor validations need refactoring.' 
-              : 'CLEAN: Excellent code structure. Minor cleanups might apply.'}
-        </p>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* Score ring */}
+      <ScoreRing score={latestReview.severityScore} />
 
-      {/* AI Summary card */}
-      <div className="glass-card p-6 flex flex-col gap-3 border border-white/5 bg-slate-900/10 rounded-xl shadow-lg">
-        <span className="text-xs uppercase font-extrabold text-slate-400 tracking-wider">AI Executive Review</span>
-        <p className="text-sm text-slate-300 leading-6 font-medium">
+      {/* AI Summary */}
+      <div className="card" style={{ padding: '16px 18px' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-secondary)', marginBottom: 10 }}>
+          AI Summary
+        </div>
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.7 }}>
           {latestReview.summary}
         </p>
       </div>
 
-      {/* AI token usage metadata */}
+      {/* Usage metadata */}
       {usageLogs.length > 0 && (
-        <div className="glass-card p-6 flex flex-col gap-4 border border-white/5 bg-slate-900/10 rounded-xl shadow-lg">
-          <span className="text-xs uppercase font-extrabold text-slate-400 tracking-wider">Diagnostic Performance logs</span>
-          
+        <div className="card" style={{ padding: '16px 18px' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-secondary)', marginBottom: 10 }}>
+            Diagnostic Stats
+          </div>
           {usageLogs.map((usage, idx) => (
-            <div key={idx} className="flex flex-col gap-3 text-xs border-b border-white/5 pb-4 last:border-b-0 last:pb-0">
+            <div key={idx} style={{ marginBottom: idx < usageLogs.length - 1 ? 16 : 0 }}>
               {usage.actionDescription && (
-                <div className="text-[10px] font-black uppercase text-indigo-400 tracking-wider mb-1">
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
                   {usage.actionDescription}
                 </div>
               )}
-              <div className="flex justify-between border-b border-slate-800/30 pb-2">
-                <span className="text-slate-500 font-medium">LLM Model:</span>
-                <span className="font-mono text-slate-300">{usage.modelName}</span>
-              </div>
-              <div className="flex justify-between border-b border-slate-800/30 pb-2">
-                <span className="text-slate-500 font-medium">Latency Speed:</span>
-                <span className="text-slate-300 font-semibold">{(usage.latencyMs / 1000).toFixed(2)}s</span>
-              </div>
-              <div className="flex justify-between border-b border-slate-800/30 pb-2">
-                <span className="text-slate-500 font-medium">Token Footprint:</span>
-                <span className="text-slate-300 font-semibold">{usage.totalTokens.toLocaleString()} tokens</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500 font-medium">OpenRouter Spend:</span>
-                <span className="text-violet-400 font-bold">${(usage.cost || 0).toFixed(4)}</span>
+              <InfoRow label="Model" value={usage.modelName} />
+              <InfoRow label="Latency" value={`${(usage.latencyMs / 1000).toFixed(2)}s`} />
+              <InfoRow label="Tokens" value={usage.totalTokens.toLocaleString()} />
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '8px 0', fontSize: 12,
+              }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Cost</span>
+                <span style={{ color: '#34d399', fontFamily: 'monospace', fontWeight: 600 }}>
+                  ${(usage.cost || 0).toFixed(4)}
+                </span>
               </div>
             </div>
           ))}

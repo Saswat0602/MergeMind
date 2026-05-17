@@ -7,159 +7,255 @@ interface PRTableProps {
   onPageChange: (newPage: number) => void;
 }
 
-export function PRTable({ filteredPrs, pagination, onPageChange }: PRTableProps) {
-  const getScoreColor = (score: number | null) => {
-    if (score === null) return 'text-slate-500 bg-slate-800/20 border-slate-700/20';
-    if (score > 70) return 'text-rose-400 bg-rose-500/10 border-rose-500/20 shadow-[0_0_12px_-4px_rgba(244,63,94,0.3)]';
-    if (score >= 30) return 'text-amber-400 bg-amber-500/10 border-amber-500/20 shadow-[0_0_12px_-4px_rgba(245,158,11,0.3)]';
-    return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20 shadow-[0_0_12px_-4px_rgba(16,185,129,0.3)]';
-  };
+function getScoreBadge(score: number | null) {
+  if (score === null) return { cls: 'badge-neutral', label: '—' };
+  if (score > 70)  return { cls: 'badge-danger',  label: `${score}` };
+  if (score >= 30) return { cls: 'badge-warning', label: `${score}` };
+  return            { cls: 'badge-success', label: `${score}` };
+}
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/25">
-            COMPLETED
-          </span>
-        );
-      case 'PROCESSING':
-      case 'QUEUED':
-        return (
-          <span className="inline-flex items-center gap-1.5 text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-full text-[10px] font-bold">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping"></span>
-            PROCESSING
-          </span>
-        );
-      case 'FAILED':
-        return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/25">
-            FAILED
-          </span>
-        );
-      default:
-        return <span className="text-slate-400">{status}</span>;
-    }
-  };
+function getStatusBadge(status: string) {
+  switch (status) {
+    case 'COMPLETED':   return { cls: 'badge-success', label: 'Completed' };
+    case 'PROCESSING':
+    case 'QUEUED':      return { cls: 'badge-accent',  label: 'Processing' };
+    case 'FAILED':      return { cls: 'badge-danger',  label: 'Failed' };
+    default:            return { cls: 'badge-neutral', label: status };
+  }
+}
+
+function IconExternalLink() {
+  return (
+    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+    </svg>
+  );
+}
+
+function IconChevron() {
+  return (
+    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+// Mobile card for a single PR row
+function PRCard({ pr }: { pr: PRRecord }) {
+  const status = getStatusBadge(pr.reviewStatus);
+  const score = getScoreBadge(pr.severityScore);
 
   return (
-    <section className="relative glass-card p-6 border border-white/5 rounded-xl bg-slate-900/5 backdrop-blur-md flex flex-col gap-6 z-10">
-      <div className="flex justify-between items-center border-b border-slate-800/40 pb-4">
-        <div>
-          <h3 className="text-base font-bold text-white uppercase tracking-wider">Review Audit Pipeline Logs</h3>
-          <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Real-time status of analysis webhooks</p>
-        </div>
-        <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-widest bg-slate-800/50 text-slate-400 rounded-lg border border-slate-700">
-          {filteredPrs.length} PRs matched
-        </span>
+    <div className="card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* Title + external link */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+        <a
+          href={pr.htmlUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            fontSize: 13, fontWeight: 600, color: 'var(--text-primary)',
+            textDecoration: 'none', flex: 1,
+          }}
+        >
+          #{pr.number} {pr.title}
+        </a>
+        <a href={pr.htmlUrl} target="_blank" rel="noopener noreferrer"
+          style={{ color: 'var(--text-muted)', flexShrink: 0, marginTop: 2 }}>
+          <IconExternalLink />
+        </a>
       </div>
 
-      <div className="overflow-x-auto">
-        {filteredPrs.length === 0 ? (
-          <div className="py-16 text-center text-slate-500 text-sm font-medium flex flex-col items-center justify-center gap-3">
-            <svg className="w-8 h-8 text-slate-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            No pull request audits match the selected filter configuration.
-          </div>
-        ) : (
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-800/80 text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                <th className="pb-3 pl-4">Pull Request / Branch</th>
-                <th className="pb-3">Repository</th>
-                <th className="pb-3">Author</th>
-                <th className="pb-3">Pipeline Status</th>
-                <th className="pb-3">Threat Rating</th>
-                <th className="pb-3 pr-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/40 text-xs">
-              {filteredPrs.map(pr => (
-                <tr key={pr.id} className="hover:bg-slate-800/15 transition-all duration-150">
-                  <td className="py-4 pl-4 font-semibold text-white max-w-sm">
-                    <div className="flex flex-col gap-1">
-                      <a href={pr.htmlUrl} target="_blank" rel="noopener noreferrer" className="hover:text-indigo-300 font-bold flex items-center gap-1.5 text-xs truncate">
-                        #{pr.number} - {pr.title}
-                        <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                      </a>
-                      <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono">
-                        <svg className="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h2" />
-                        </svg>
-                        {pr.branchName || 'main'}
-                      </div>
-                      {pr.commitMessage && (
-                        <div className="text-[10px] text-slate-500 italic max-w-xs truncate pl-1 mt-0.5">
-                          💬 "{pr.commitMessage}"
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-4 text-slate-300 font-mono text-[11px] font-semibold">{pr.repositoryName}</td>
-                  <td className="py-4 text-slate-300">
-                    <span className="font-semibold text-slate-500">@</span>{pr.authorHandle}
-                  </td>
-                  <td className="py-4">{getStatusBadge(pr.reviewStatus)}</td>
-                  <td className="py-4">
-                    {pr.severityScore !== null ? (
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${getScoreColor(pr.severityScore)}`}>
-                        {pr.severityScore} / 100
-                      </span>
-                    ) : (
-                      <span className="text-slate-600 font-semibold">—</span>
-                    )}
-                  </td>
-                  <td className="py-4 pr-4 text-right">
-                    {pr.reviewStatus === 'COMPLETED' ? (
-                      <Link
-                        href={`/reviews/${pr.id}`}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:shadow-[0_0_20px_rgba(99,102,241,0.5)]"
-                      >
-                        Report
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </Link>
-                    ) : (
-                      <button disabled className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded bg-slate-800/40 text-slate-600 border border-slate-800/60 cursor-not-allowed">
-                        No Report
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Meta row */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
+        <span style={{ fontFamily: 'monospace' }}>{pr.repositoryName}</span>
+        <span>·</span>
+        <span>@{pr.authorHandle}</span>
+        {pr.branchName && (
+          <>
+            <span>·</span>
+            <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{pr.branchName}</span>
+          </>
         )}
       </div>
 
-      {/* Dynamic Pagination Controls */}
+      {/* Badges + action */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <span className={`badge ${status.cls}`}>{status.label}</span>
+          {pr.severityScore !== null && (
+            <span className={`badge ${score.cls}`}>{score.label}/100</span>
+          )}
+        </div>
+        {pr.reviewStatus === 'COMPLETED' ? (
+          <Link
+            href={`/reviews/${pr.id}`}
+            className="btn btn-primary"
+            style={{ padding: '5px 12px', fontSize: 12 }}
+          >
+            Report <IconChevron />
+          </Link>
+        ) : (
+          <button disabled className="btn btn-secondary" style={{ padding: '5px 12px', fontSize: 12, opacity: 0.4 }}>
+            No report
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function PRTable({ filteredPrs, pagination, onPageChange }: PRTableProps) {
+  const emptyState = (
+    <div style={{
+      padding: '48px 0', textAlign: 'center',
+      color: 'var(--text-secondary)', fontSize: 13,
+    }}>
+      No pull requests match the current filters.
+    </div>
+  );
+
+  return (
+    <div className="card" style={{ overflow: 'hidden' }}>
+      {/* Card header */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '14px 16px', borderBottom: '1px solid var(--border)',
+      }}>
+        <div>
+          <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+            Audit Pipeline
+          </h2>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '2px 0 0' }}>
+            Real-time PR review status
+          </p>
+        </div>
+        <span className="badge badge-neutral">{filteredPrs.length} results</span>
+      </div>
+
+      {/* Desktop table */}
+      {filteredPrs.length === 0 ? emptyState : (
+        <>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="data-table pr-table-desktop">
+              <thead>
+                <tr>
+                  <th style={{ paddingLeft: 16 }}>Pull Request</th>
+                  <th>Repository</th>
+                  <th>Author</th>
+                  <th>Status</th>
+                  <th>Score</th>
+                  <th style={{ textAlign: 'right', paddingRight: 16 }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPrs.map(pr => {
+                  const status = getStatusBadge(pr.reviewStatus);
+                  const score = getScoreBadge(pr.severityScore);
+                  return (
+                    <tr key={pr.id}>
+                      <td style={{ paddingLeft: 16, maxWidth: 320 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          <a
+                            href={pr.htmlUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              fontSize: 13, fontWeight: 600, color: 'var(--text-primary)',
+                              textDecoration: 'none', display: 'flex', alignItems: 'center',
+                              gap: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}
+                          >
+                            #{pr.number} {pr.title}
+                            <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}><IconExternalLink /></span>
+                          </a>
+                          {pr.branchName && (
+                            <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                              {pr.branchName}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-secondary)' }}>
+                          {pr.repositoryName}
+                        </span>
+                      </td>
+                      <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+                        @{pr.authorHandle}
+                      </td>
+                      <td>
+                        <span className={`badge ${status.cls}`}>{status.label}</span>
+                      </td>
+                      <td>
+                        {pr.severityScore !== null
+                          ? <span className={`badge ${score.cls}`}>{score.label}/100</span>
+                          : <span style={{ color: 'var(--text-muted)' }}>—</span>
+                        }
+                      </td>
+                      <td style={{ paddingRight: 16, textAlign: 'right' }}>
+                        {pr.reviewStatus === 'COMPLETED' ? (
+                          <Link
+                            href={`/reviews/${pr.id}`}
+                            className="btn btn-primary"
+                            style={{ padding: '5px 12px', fontSize: 12 }}
+                          >
+                            Report <IconChevron />
+                          </Link>
+                        ) : (
+                          <button
+                            disabled
+                            className="btn btn-secondary"
+                            style={{ padding: '5px 12px', fontSize: 12, opacity: 0.4 }}
+                          >
+                            Pending
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile card list */}
+          <div className="pr-card-list" style={{ padding: '12px' }}>
+            {filteredPrs.map(pr => <PRCard key={pr.id} pr={pr} />)}
+          </div>
+        </>
+      )}
+
+      {/* Pagination */}
       {pagination && pagination.pages > 1 && (
-        <div className="flex justify-between items-center border-t border-slate-800/40 pt-4 mt-2">
-          <span className="text-[11px] text-slate-500 font-medium">
-            Showing page {pagination.page} of {pagination.pages} ({pagination.total} total PRs)
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 16px', borderTop: '1px solid var(--border)',
+        }}>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+            Page {pagination.page} of {pagination.pages} · {pagination.total} total
           </span>
-          <div className="flex items-center gap-2">
+          <div style={{ display: 'flex', gap: 6 }}>
             <button
               disabled={pagination.page <= 1}
               onClick={() => onPageChange(pagination.page - 1)}
-              className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded bg-slate-900/40 border border-slate-800 text-slate-300 hover:bg-slate-800/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="btn btn-secondary"
+              style={{ padding: '5px 12px', fontSize: 12 }}
             >
-              Previous
+              ← Prev
             </button>
             <button
               disabled={pagination.page >= pagination.pages}
               onClick={() => onPageChange(pagination.page + 1)}
-              className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded bg-[#090b14]/40 border border-slate-800 text-slate-300 hover:bg-slate-800/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="btn btn-secondary"
+              style={{ padding: '5px 12px', fontSize: 12 }}
             >
-              Next
+              Next →
             </button>
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }

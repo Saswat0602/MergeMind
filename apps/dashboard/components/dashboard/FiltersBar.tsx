@@ -13,6 +13,25 @@ interface FiltersBarProps {
   branches: string[];
 }
 
+function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
+      <label className="form-label">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function IconSearch() {
+  return (
+    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+      style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+  );
+}
+
 export function FiltersBar({
   searchQuery,
   setSearchQuery,
@@ -26,45 +45,40 @@ export function FiltersBar({
   branches,
 }: FiltersBarProps) {
   return (
-    <section className="relative glass-card p-6 border border-white/5 rounded-xl bg-slate-900/5 backdrop-blur-md flex flex-col gap-5 z-20">
-      <div>
-        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-          <svg className="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-          </svg>
-          Interactive Filters & Search Parameters
-        </h3>
-        <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Refine logs by branch name, code repository, severity threat score, or string query.</p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Search Input */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 pl-1">Search Keywords</label>
-          <div className="relative">
+    <div className="card" style={{ padding: '14px 16px' }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+        gap: 12,
+        alignItems: 'end',
+      }}>
+        {/* Search */}
+        <FilterGroup label="Search">
+          <div style={{ position: 'relative' }}>
+            <span style={{
+              position: 'absolute', left: 10, top: '50%',
+              transform: 'translateY(-50%)',
+              display: 'flex', alignItems: 'center',
+            }}>
+              <IconSearch />
+            </span>
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search PR, author, commit..."
-              className="w-full px-3.5 py-2 bg-[#090b14]/80 border border-slate-800/80 rounded-lg text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-all duration-300 font-medium"
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="PR title, author, commit…"
+              className="form-input"
+              style={{ paddingLeft: 32 }}
             />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-200 text-xs font-bold"
-              >
-                ✕
-              </button>
-            )}
           </div>
-        </div>
+        </FilterGroup>
 
-        {/* Repository Dropdown */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 pl-1">Filter Repository</label>
+        {/* Repository */}
+        <FilterGroup label="Repository">
           <Select value={selectedRepo} onValueChange={setSelectedRepo}>
-            <SelectTrigger>{selectedRepo === 'ALL' ? 'All Repositories' : selectedRepo}</SelectTrigger>
+            <SelectTrigger>
+              {selectedRepo === 'ALL' ? 'All Repositories' : selectedRepo}
+            </SelectTrigger>
             <SelectContent>
               {repositories.map(repo => (
                 <SelectItem key={repo} value={repo}>
@@ -73,13 +87,14 @@ export function FiltersBar({
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </FilterGroup>
 
-        {/* Branch Dropdown */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 pl-1">Filter Branch Name</label>
+        {/* Branch */}
+        <FilterGroup label="Branch">
           <Select value={selectedBranch} onValueChange={setSelectedBranch}>
-            <SelectTrigger className="font-mono">{selectedBranch === 'ALL' ? 'All Branches' : selectedBranch}</SelectTrigger>
+            <SelectTrigger>
+              {selectedBranch === 'ALL' ? 'All Branches' : selectedBranch}
+            </SelectTrigger>
             <SelectContent>
               {branches.map(branch => (
                 <SelectItem key={branch} value={branch}>
@@ -88,27 +103,26 @@ export function FiltersBar({
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </FilterGroup>
 
-        {/* Severity Score Filter */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 pl-1">Threat Severity Rating</label>
-          <Select value={selectedSeverity} onValueChange={(val) => setSelectedSeverity(val as any)}>
+        {/* Severity */}
+        <FilterGroup label="Severity">
+          <Select value={selectedSeverity} onValueChange={val => setSelectedSeverity(val as 'ALL' | 'CRITICAL' | 'MODERATE' | 'CLEAN')}>
             <SelectTrigger>
               {selectedSeverity === 'ALL' && 'All Levels'}
-              {selectedSeverity === 'CRITICAL' && 'Critical Threat (> 70)'}
-              {selectedSeverity === 'MODERATE' && 'Moderate Severity (30 - 70)'}
-              {selectedSeverity === 'CLEAN' && 'Clean Code (< 30)'}
+              {selectedSeverity === 'CRITICAL' && 'Critical (> 70)'}
+              {selectedSeverity === 'MODERATE' && 'Moderate (30–70)'}
+              {selectedSeverity === 'CLEAN' && 'Clean (< 30)'}
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">All Levels</SelectItem>
-              <SelectItem value="CRITICAL">Critical Threat (&gt; 70)</SelectItem>
-              <SelectItem value="MODERATE">Moderate Severity (30 - 70)</SelectItem>
-              <SelectItem value="CLEAN">Clean Code (&lt; 30)</SelectItem>
+              <SelectItem value="CRITICAL">Critical (&gt; 70)</SelectItem>
+              <SelectItem value="MODERATE">Moderate (30–70)</SelectItem>
+              <SelectItem value="CLEAN">Clean (&lt; 30)</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </FilterGroup>
       </div>
-    </section>
+    </div>
   );
 }

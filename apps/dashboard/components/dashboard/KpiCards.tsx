@@ -1,67 +1,79 @@
-import Link from 'next/link';
 import { Stats } from '../../types';
 
 interface KpiCardsProps {
   stats: Stats | null;
 }
 
+interface KpiCardProps {
+  label: string;
+  value: string | number;
+  meta: string;
+  accentColor: string;
+  action?: React.ReactNode;
+}
+
+function KpiCard({ label, value, meta, accentColor, action }: KpiCardProps) {
+  return (
+    <div className="stat-card" style={{ borderLeft: `3px solid ${accentColor}` }}>
+      <div className="stat-label">{label}</div>
+      <div className="stat-value" style={{ color: 'var(--text-primary)' }}>{value}</div>
+      <div className="stat-meta" style={{ justifyContent: 'space-between' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{
+            width: 6, height: 6, borderRadius: '50%',
+            background: accentColor, display: 'inline-block', flexShrink: 0,
+          }} />
+          {meta}
+        </span>
+        {action}
+      </div>
+    </div>
+  );
+}
+
+import Link from 'next/link';
+
 export function KpiCards({ stats }: KpiCardsProps) {
   if (!stats) return null;
 
   return (
-    <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
-      {/* Audited PRs */}
-      <div className="glass-card p-6 flex flex-col justify-between min-h-[140px] border border-white/5 hover:border-indigo-500/25 transition-all duration-300 rounded-xl bg-slate-900/10 shadow-[0_0_30px_-15px_rgba(99,102,241,0.15)]">
-        <div>
-          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Total PRs Audited</span>
-          <h2 className="text-4xl font-black text-white mt-3 font-mono">{stats.totalPrs}</h2>
-        </div>
-        <div className="text-xs text-indigo-400 font-medium flex items-center gap-1.5 mt-4">
-          <span className="flex h-2 w-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]"></span>
-          {stats.activeRepositories} Active Projects Monitored
-        </div>
-      </div>
-
-      {/* Security Threat */}
-      <div className="glass-card p-6 flex flex-col justify-between min-h-[140px] border border-white/5 hover:border-rose-500/25 transition-all duration-300 rounded-xl bg-slate-900/10 shadow-[0_0_30px_-15px_rgba(244,63,94,0.15)]">
-        <div>
-          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Security Vulnerabilities</span>
-          <h2 className="text-4xl font-black text-rose-500 mt-3 font-mono">{stats.highSeverityCount}</h2>
-        </div>
-        <div className="text-xs text-rose-400 font-medium flex items-center gap-1.5 mt-4">
-          <span className="flex h-2 w-2 rounded-full bg-rose-500 pulse-indicator shadow-[0_0_8px_rgba(244,63,94,0.5)]"></span>
-          Critical Threats Intercepted
-        </div>
-      </div>
-
-      {/* Smells */}
-      <div className="glass-card p-6 flex flex-col justify-between min-h-[140px] border border-white/5 hover:border-amber-500/25 transition-all duration-300 rounded-xl bg-slate-900/10 shadow-[0_0_30px_-15px_rgba(245,158,11,0.15)]">
-        <div>
-          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Performance & Code smells</span>
-          <h2 className="text-4xl font-black text-amber-500 mt-3 font-mono">{stats.mediumSeverityCount + stats.lowSeverityCount}</h2>
-        </div>
-        <div className="text-xs text-amber-400 font-medium flex items-center gap-1.5 mt-4">
-          <span className="flex h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]"></span>
-          {stats.mediumSeverityCount} Performance, {stats.lowSeverityCount} Smells
-        </div>
-      </div>
-
-      {/* Estimated Spend */}
-      <div className="glass-card p-6 flex flex-col justify-between min-h-[140px] border border-white/5 hover:border-violet-500/25 transition-all duration-300 rounded-xl bg-slate-900/10 shadow-[0_0_30px_-15px_rgba(139,92,246,0.15)]">
-        <div>
-          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Estimated Compute Cost</span>
-          <h2 className="text-4xl font-black text-violet-400 mt-3 font-mono">${stats.totalCost.toFixed(4)}</h2>
-        </div>
-        <div className="text-xs text-violet-400 font-medium flex items-center justify-between mt-4">
-          <div className="flex items-center gap-1.5">
-            <span className="flex h-2 w-2 rounded-full bg-violet-400 shadow-[0_0_8px_rgba(139,92,246,0.5)]"></span>
-            {stats.totalTokens.toLocaleString()} LLM Tokens
-          </div>
-          <Link href="/usage" className="hover:underline font-bold text-violet-300 text-[11px] uppercase tracking-wider flex items-center gap-0.5">
-            Logs →
+    <section style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+      gap: 14,
+    }}>
+      <KpiCard
+        label="PRs Audited"
+        value={stats.totalPrs}
+        meta={`${stats.activeRepositories} repos monitored`}
+        accentColor="#6366f1"
+      />
+      <KpiCard
+        label="Security Vulnerabilities"
+        value={stats.highSeverityCount}
+        meta="Critical threats found"
+        accentColor="#ef4444"
+      />
+      <KpiCard
+        label="Performance & Smells"
+        value={stats.mediumSeverityCount + stats.lowSeverityCount}
+        meta={`${stats.mediumSeverityCount} perf · ${stats.lowSeverityCount} style`}
+        accentColor="#f59e0b"
+      />
+      <KpiCard
+        label="Compute Cost"
+        value={`$${stats.totalCost.toFixed(4)}`}
+        meta={`${stats.totalTokens.toLocaleString()} tokens`}
+        accentColor="#8b5cf6"
+        action={
+          <Link
+            href="/usage"
+            style={{ color: '#818cf8', fontSize: 11, fontWeight: 600, textDecoration: 'none' }}
+          >
+            View logs →
           </Link>
-        </div>
-      </div>
+        }
+      />
     </section>
   );
 }

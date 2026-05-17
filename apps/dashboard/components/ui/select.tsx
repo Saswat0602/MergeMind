@@ -24,15 +24,11 @@ export function Select({ value, onValueChange, placeholder, children }: SelectPr
   }, []);
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child)) {
           return React.cloneElement(child, {
-            value,
-            onValueChange,
-            isOpen,
-            setIsOpen,
-            placeholder,
+            value, onValueChange, isOpen, setIsOpen, placeholder,
           } as any);
         }
         return child;
@@ -50,19 +46,28 @@ interface SelectTriggerProps {
   children?: React.ReactNode;
 }
 
-export function SelectTrigger({ className, value, isOpen, setIsOpen, placeholder, children }: SelectTriggerProps) {
+export function SelectTrigger({ className = '', value, isOpen, setIsOpen, placeholder, children }: SelectTriggerProps) {
   return (
     <button
       type="button"
       onClick={() => setIsOpen?.(!isOpen)}
-      className={`w-full flex items-center justify-between px-3.5 py-2 bg-[#090b14]/90 border border-slate-800/80 hover:border-slate-700/60 rounded-lg text-xs text-slate-200 transition-all duration-300 font-medium select-none text-left focus:outline-none focus:ring-1 focus:ring-violet-500/50 backdrop-blur-md ${className || ''}`}
+      className={`form-input ${className}`}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        cursor: 'pointer', textAlign: 'left',
+        borderColor: isOpen ? 'var(--accent)' : undefined,
+      }}
     >
-      <span className="truncate">{children || placeholder || 'Select option...'}</span>
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {children || placeholder || 'Select…'}
+      </span>
       <svg
-        className={`w-3.5 h-3.5 text-slate-500 transition-transform duration-200 shrink-0 ml-2 ${isOpen ? 'rotate-180 text-violet-400' : ''}`}
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
+        width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        style={{
+          color: 'var(--text-muted)', flexShrink: 0, marginLeft: 8,
+          transform: isOpen ? 'rotate(180deg)' : 'none',
+          transition: 'transform 0.15s',
+        }}
       >
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
       </svg>
@@ -82,19 +87,20 @@ export function SelectContent({ isOpen, value, onValueChange, setIsOpen, childre
   if (!isOpen) return null;
 
   return (
-    <div className="absolute left-0 right-0 mt-1.5 min-w-[8rem] overflow-hidden rounded-lg border border-slate-800/80 bg-[#090b14] shadow-[0_4px_20px_rgba(0,0,0,0.6)] z-50 backdrop-blur-lg max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
-      <div className="p-1 flex flex-col gap-0.5">
-        {React.Children.map(children, (child) => {
-          if (React.isValidElement(child)) {
-            return React.cloneElement(child, {
-              currentValue: value,
-              onValueChange,
-              setIsOpen,
-            } as any);
-          }
-          return child;
-        })}
-      </div>
+    <div style={{
+      position: 'absolute', left: 0, right: 0, top: 'calc(100% + 4px)',
+      background: 'var(--bg-elevated)', border: '1px solid var(--border-soft)',
+      borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+      zIndex: 50, maxHeight: 240, overflowY: 'auto', padding: 4,
+    }}>
+      {React.Children.map(children, (child) => {
+        if (React.isValidElement(child)) {
+          return React.cloneElement(child, {
+            currentValue: value, onValueChange, setIsOpen,
+          } as any);
+        }
+        return child;
+      })}
     </div>
   );
 }
@@ -113,19 +119,25 @@ export function SelectItem({ value, currentValue, onValueChange, setIsOpen, chil
   return (
     <button
       type="button"
-      onClick={() => {
-        onValueChange?.(value);
-        setIsOpen?.(false);
+      onClick={() => { onValueChange?.(value); setIsOpen?.(false); }}
+      style={{
+        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '7px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
+        fontSize: 13, textAlign: 'left', fontFamily: 'inherit',
+        background: isSelected ? 'var(--accent-dim)' : 'transparent',
+        color: isSelected ? '#818cf8' : 'var(--text-primary)',
+        fontWeight: isSelected ? 600 : 400,
+        transition: 'background 0.1s',
       }}
-      className={`w-full flex items-center justify-between px-3 py-1.5 text-left text-xs rounded-md transition-all duration-150 select-none font-medium ${
-        isSelected
-          ? 'bg-violet-600/90 text-white font-bold'
-          : 'text-slate-300 hover:bg-slate-800/50 hover:text-white'
-      }`}
+      onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-base)'; }}
+      onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
     >
-      <span className="truncate">{children}</span>
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {children}
+      </span>
       {isSelected && (
-        <svg className="w-3.5 h-3.5 text-white shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          style={{ flexShrink: 0, marginLeft: 8, color: '#818cf8' }}>
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
         </svg>
       )}
