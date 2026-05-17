@@ -23,16 +23,21 @@ export class WebhookController {
   @Post()
   async handleWebhook(
     @Headers('x-hub-signature-256') signature: string,
+    @Headers('x-github-event') githubEvent: string,
     @Body() payload: SharedTypes.WebhookPayload,
   ) {
     this.verifySignature(payload, signature);
 
     this.logger.log(
-      `Received webhook action: ${payload.action} for PR #${payload.pull_request?.number}`,
+      `Received GitHub webhook event: ${githubEvent} (action: ${payload.action || 'none'})`,
     );
 
-    if (payload.action === 'opened' || payload.action === 'synchronize') {
-      return this.webhookService.processPullRequest(payload);
+    if (githubEvent === 'pull_request') {
+      if (payload.action === 'opened' || payload.action === 'synchronize') {
+        return this.webhookService.processPullRequest(payload);
+      }
+    } else if (githubEvent === 'push') {
+      return this.webhookService.processPushCommit(payload);
     }
 
     return { received: true };

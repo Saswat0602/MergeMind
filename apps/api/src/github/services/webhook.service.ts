@@ -14,15 +14,37 @@ export class WebhookService {
   ) {}
 
   async processPullRequest(payload: WebhookPayload) {
-    const { pull_request, repository } = payload;
+    const { repository } = payload;
+    const pull_request = payload.pull_request!;
+
+    // 0. Upsert GitHubInstallation if present
+    let installationId: number | undefined;
+    if (payload.installation?.id) {
+      installationId = payload.installation.id;
+      await this.prisma.gitHubInstallation.upsert({
+        where: { githubId: installationId },
+        update: { isActive: true },
+        create: {
+          githubId: installationId,
+          accountName: repository.owner.login,
+          accountType: 'Organization',
+          targetId: repository.owner.id,
+          isActive: true,
+        },
+      });
+    }
 
     // 1. Upsert Organization
     const organization = await this.prisma.organization.upsert({
       where: { githubId: repository.owner.id },
-      update: { name: repository.owner.login },
+      update: {
+        name: repository.owner.login,
+        ...(installationId ? { installationId } : {}),
+      },
       create: {
         name: repository.owner.login,
         githubId: repository.owner.id,
+        ...(installationId ? { installationId } : {}),
       },
     });
 
@@ -102,6 +124,141 @@ export class WebhookService {
 
     this.logger.log(
       `Queued analysis job for PR #${pull_request.number} in ${repository.full_name}`,
+    );
+
+    return { jobId: analysisJob.id };
+  }
+
+  private getStableNegativeNumber(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return -Math.abs(hash % 900000) - 100; // returns value in range [-900100, -100]
+  }
+
+  async processPushCommit(payload: WebhookPayload) {
+    const { repository, ref, before, after, commits } = payload;
+
+    if (!after || after === '0000000000000000000000000000000000000000' || !commits || commits.length === 0) {
+      return { skipped: true, reason: 'No new commits or branch deleted' };
+    }
+
+    // 0. Upsert GitHubInstallation if present
+    let installationId: number | undefined;
+    if (payload.installation?.id) {
+      installationId = payload.installation.id;
+      await this.prisma.gitHubInstallation.upsert({
+        where: { githubId: installationId },
+        update: { isActive: true },
+        create: {
+          githubId: installationId,
+          accountName: repository.owner.login,
+          accountType: 'Organization',
+          targetId: repository.owner.id,
+          isActive: true,
+        },
+      });
+    }
+
+    // 1. Upsert Organization
+    const organization = await this.prisma.organization.upsert({
+      where: { githubId: repository.owner.id },
+      update: {
+        name: repository.owner.login,
+        ...(installationId ? { installationId } : {}),
+      },
+      create: {
+        name: repository.owner.login,
+        githubId: repository.owner.id,
+        ...(installationId ? { installationId } : {}),
+      },
+    });
+
+    // 2. Upsert Repository
+    const branchName = ref ? ref.replace('refs/heads/', '') : 'main';
+    const repo = await this.prisma.repository.upsert({
+      where: { githubId: repository.id },
+      update: {
+        name: repository.name,
+        fullName: repository.full_name,
+        defaultBranch: branchName,
+      },
+      create: {
+        name: repository.name,
+        fullName: repository.full_name,
+        githubId: repository.id,
+        organizationId: organization.id,
+        defaultBranch: branchName,
+      },
+    });
+
+    // 3. Create or Upsert a Special "Branch Commit Push" PullRequest record
+    const pseudoNumber = this.getStableNegativeNumber(branchName);
+    const latestCommit = commits[commits.length - 1];
+
+    const pr = await this.prisma.pullRequest.upsert({
+      where: {
+        repositoryId_number: {
+          repositoryId: repo.id,
+          number: pseudoNumber,
+        },
+      },
+      update: {
+        title: `Branch Push: ${branchName}`,
+        state: 'open',
+        headSha: after,
+        headBranch: branchName,
+        baseBranch: branchName,
+      },
+      create: {
+        number: pseudoNumber,
+        githubId: pseudoNumber, // negative unique ID to avoid conflict with standard GitHub IDs
+        title: `Branch Push: ${branchName}`,
+        state: 'open',
+        authorHandle: latestCommit?.author?.username || repository.owner.login,
+        headSha: after,
+        headBranch: branchName,
+        baseBranch: branchName,
+        htmlUrl: `https://github.com/${repository.full_name}/tree/${branchName}`,
+        repositoryId: repo.id,
+      },
+    });
+
+    // 4. Create Standalone Commit Analysis Job record
+    const analysisJob = await this.prisma.analysisJob.create({
+      data: {
+        pullRequestId: pr.id,
+        status: 'QUEUED',
+        step: 'QUEUED',
+      },
+    });
+
+    // 5. Add to BullMQ with isPushEvent flag
+    await this.prReviewQueue.add(
+      'analyze',
+      {
+        pullRequestId: pr.id,
+        analysisJobId: analysisJob.id,
+        repositoryFullname: repository.full_name,
+        beforeSha: before,
+        afterSha: after,
+        headSha: after,
+        commitMessage: latestCommit?.message || 'Branch Push',
+        authorHandle: latestCommit?.author?.username || repository.owner.login,
+        isPushEvent: true,
+      },
+      {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
+      },
+    );
+
+    this.logger.log(
+      `Queued direct push analysis job for commits on ref ${ref} in ${repository.full_name}`,
     );
 
     return { jobId: analysisJob.id };

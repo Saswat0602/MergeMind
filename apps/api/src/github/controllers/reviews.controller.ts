@@ -1,0 +1,107 @@
+import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '@mergemind/database';
+
+@Controller('dashboard')
+export class ReviewsController {
+  constructor(private readonly prisma: PrismaService) {}
+
+  @Get('stats')
+  async getStats() {
+    const totalPrs = await this.prisma.pullRequest.count();
+    const activeRepositories = await this.prisma.repository.count({
+      where: { isActive: true },
+    });
+
+    // Aggregate comments count by severity
+    const comments = await this.prisma.reviewComment.groupBy({
+      by: ['severity'],
+      _count: {
+        _all: true,
+      },
+    });
+
+    const highSeverityCount = comments.find(c => c.severity === 'HIGH')?._count._all || 0;
+    const mediumSeverityCount = comments.find(c => c.severity === 'MEDIUM')?._count._all || 0;
+    const lowSeverityCount = comments.find(c => c.severity === 'LOW')?._count._all || 0;
+
+    // Aggregate tokens and cost
+    const usage = await this.prisma.aiUsageLog.aggregate({
+      _sum: {
+        totalTokens: true,
+        cost: true,
+      },
+    });
+
+    return {
+      totalPrs,
+      activeRepositories,
+      highSeverityCount,
+      mediumSeverityCount,
+      lowSeverityCount,
+      totalTokens: usage._sum.totalTokens || 0,
+      totalCost: usage._sum.cost || 0.0,
+    };
+  }
+
+  @Get('prs')
+  async getPRs() {
+    const prs = await this.prisma.pullRequest.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        repository: true,
+        reviews: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+        jobs: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    return prs.map(pr => {
+      const latestReview = pr.reviews[0];
+      const latestJob = pr.jobs[0];
+
+      return {
+        id: pr.id,
+        number: pr.number,
+        title: pr.title,
+        state: pr.state,
+        authorHandle: pr.authorHandle,
+        htmlUrl: pr.htmlUrl,
+        repositoryName: pr.repository.fullName,
+        reviewStatus: latestReview?.status || latestJob?.status || 'PENDING',
+        severityScore: latestReview?.severityScore ?? null,
+        createdAt: pr.createdAt,
+      };
+    });
+  }
+
+  @Get('prs/:id')
+  async getPRDetails(@Param('id') id: string) {
+    const pr = await this.prisma.pullRequest.findUnique({
+      where: { id },
+      include: {
+        repository: true,
+        reviews: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            comments: true,
+            usageLogs: true,
+          },
+        },
+        jobs: {
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+
+    if (!pr) {
+      throw new NotFoundException(`PR with ID ${id} not found`);
+    }
+
+    return pr;
+  }
+}
