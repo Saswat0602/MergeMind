@@ -120,7 +120,7 @@ export default function ReviewPage({ params }: ReviewPageProps) {
       />
 
       {/* ── Main Layout ──────────────────────────────────── */}
-      <div className="flex flex-col gap-6 w-full max-w-[1200px] mx-auto min-w-0">
+      <div className="flex flex-col gap-6 w-full min-w-0">
 
         {/* Tab bar */}
         <div className="tab-list" style={{ marginBottom: 16 }}>
