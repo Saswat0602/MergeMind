@@ -43,6 +43,63 @@ export class ReviewsController {
     };
   }
 
+  @Get('usage')
+  async getUsage() {
+    const logs = await this.prisma.aiUsageLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        reviewResult: {
+          include: {
+            pullRequest: {
+              include: {
+                repository: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const totalUsage = await this.prisma.aiUsageLog.aggregate({
+      _sum: {
+        totalTokens: true,
+        cost: true,
+        promptTokens: true,
+        completionTokens: true,
+      },
+      _avg: {
+        latencyMs: true,
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    return {
+      logs: logs.map(log => ({
+        id: log.id,
+        modelName: log.modelName,
+        promptTokens: log.promptTokens,
+        completionTokens: log.completionTokens,
+        totalTokens: log.totalTokens,
+        latencyMs: log.latencyMs,
+        cost: log.cost || 0.0,
+        createdAt: log.createdAt,
+        repositoryName: log.reviewResult?.pullRequest?.repository?.fullName || 'N/A',
+        prTitle: log.reviewResult?.pullRequest?.title || 'N/A',
+        prNumber: log.reviewResult?.pullRequest?.number || 0,
+      })),
+      summary: {
+        totalTokens: totalUsage._sum.totalTokens || 0,
+        promptTokens: totalUsage._sum.promptTokens || 0,
+        completionTokens: totalUsage._sum.completionTokens || 0,
+        totalCost: totalUsage._sum.cost || 0.0,
+        averageLatencyMs: Math.round(totalUsage._avg.latencyMs || 0),
+        totalRequests: totalUsage._count.id || 0,
+      },
+    };
+  }
+
   @Get('prs')
   async getPRs() {
     const prs = await this.prisma.pullRequest.findMany({

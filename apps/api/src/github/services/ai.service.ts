@@ -32,8 +32,8 @@ export class AiService {
       throw new Error('OPENROUTER_API_KEY is not set in environment');
     }
 
-    // Default to excellent code analysis model
-    const model = this.configService.get<string>('AI_MODEL') || 'qwen/qwen-2.5-coder-32b-instruct';
+    const primaryModel = this.configService.get<string>('AI_MODEL') || 'deepseek/deepseek-v4-flash:free';
+    const fallbackModel = 'arcee-ai/trinity-large-thinking:free';
 
     const systemPrompt = `You are a professional, senior software engineer and security auditor.
 Your job is to review a Git Pull Request diff and provide:
@@ -82,7 +82,12 @@ ${diffContent}
 Analyze the diff and return the JSON review report.`;
 
     const startTime = Date.now();
+    let modelUsed = primaryModel;
+    let responseData: any;
+    let responseText = '';
+
     try {
+      this.logger.log(`Attempting AI analysis with primary model: ${primaryModel}`);
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -92,39 +97,70 @@ Analyze the diff and return the JSON review report.`;
           'X-Title': 'MergeMind',
         },
         body: JSON.stringify({
-          model: model,
+          model: primaryModel,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },
           ],
           response_format: { type: 'json_object' },
-          temperature: 0.1, // Keep it deterministic
+          temperature: 0.1,
         }),
       });
 
-      const latencyMs = Date.now() - startTime;
-
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`OpenRouter API responded with status ${response.status}: ${errorText}`);
+        throw new Error(`Status ${response.status}: ${errorText}`);
       }
 
-      const responseData = await response.json();
-      const rawText = responseData.choices[0]?.message?.content || '';
-      
-      const parsedJson = this.parseJsonResilient(rawText);
+      responseData = await response.json();
+      responseText = responseData.choices[0]?.message?.content || '';
+    } catch (primaryError) {
+      this.logger.warn(`Primary model ${primaryModel} failed: ${primaryError.message}. Retrying with fallback: ${fallbackModel}`);
+      modelUsed = fallbackModel;
 
-      return {
-        response: parsedJson,
-        promptTokens: responseData.usage?.prompt_tokens || 0,
-        completionTokens: responseData.usage?.completion_tokens || 0,
-        latencyMs,
-        modelUsed: model,
-      };
-    } catch (error) {
-      this.logger.error(`AI Analysis failed: ${error.message}`, error.stack);
-      throw error;
+      try {
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+            'HTTP-Referer': 'https://mergemind.dev',
+            'X-Title': 'MergeMind',
+          },
+          body: JSON.stringify({
+            model: fallbackModel,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+            response_format: { type: 'json_object' },
+            temperature: 0.1,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Status ${response.status}: ${errorText}`);
+        }
+
+        responseData = await response.json();
+        responseText = responseData.choices[0]?.message?.content || '';
+      } catch (fallbackError) {
+        this.logger.error(`AI Analysis failed completely for both primary and fallback models. Fallback error: ${fallbackError.message}`);
+        throw new Error(`AI Analysis failed: Primary (${primaryModel}) error: ${primaryError.message} | Fallback (${fallbackModel}) error: ${fallbackError.message}`);
+      }
     }
+
+    const latencyMs = Date.now() - startTime;
+    const parsedJson = this.parseJsonResilient(responseText);
+
+    return {
+      response: parsedJson,
+      promptTokens: responseData.usage?.prompt_tokens || 0,
+      completionTokens: responseData.usage?.completion_tokens || 0,
+      latencyMs,
+      modelUsed,
+    };
   }
 
   private parseJsonResilient(text: string): AiReviewResponse {
