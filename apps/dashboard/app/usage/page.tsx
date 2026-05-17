@@ -235,9 +235,7 @@ export default function UsageAnalytics() {
             <div className="rounded-2xl bg-slate-950/20 border border-white/5 overflow-hidden backdrop-blur-xl">
               <div className="border-b border-white/5 px-6 py-4 bg-slate-950/30 flex justify-between items-center">
                 <h2 className="text-lg font-semibold text-white">Execution Logs</h2>
-                <span className="px-2.5 py-1 text-xs bg-indigo-500/10 text-indigo-300 rounded-full border border-indigo-500/20">
-                  Qwen-2.5-Coder Model active
-                </span>
+            
               </div>
 
               <div className="overflow-x-auto">

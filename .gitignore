@@ -46,3 +46,6 @@ yarn-error.log*
 
 # Git
 .git/
+
+# Temporary scratch scripts
+scratch/

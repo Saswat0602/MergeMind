@@ -134,20 +134,24 @@ export class PrReviewProcessor extends WorkerHost {
       });
 
       // 6. Save ReviewResult and Comments to Database
+      const commentsArray = Array.isArray(aiResult?.comments) ? aiResult.comments : [];
+      const severityScoreValue = typeof aiResult?.severityScore === 'number' ? aiResult.severityScore : 0;
+      const summaryValue = aiResult?.summary || 'No summary provided by AI.';
+
       const reviewResult = await this.prisma.reviewResult.create({
         data: {
           pullRequestId: pullRequestId,
           commitSha: headSha,
-          summary: aiResult.summary,
-          severityScore: aiResult.severityScore,
+          summary: summaryValue,
+          severityScore: severityScoreValue,
           status: 'COMPLETED',
           comments: {
-            create: aiResult.comments.map(c => ({
-              filePath: c.filePath,
-              lineNumber: c.lineNumber,
-              content: c.content,
-              severity: c.severity,
-              type: c.type,
+            create: commentsArray.map(c => ({
+              filePath: c.filePath || 'unknown',
+              lineNumber: typeof c.lineNumber === 'number' ? c.lineNumber : 1,
+              content: c.content || 'Constructive review suggestion.',
+              severity: c.severity || 'LOW',
+              type: c.type || 'STYLE',
               suggestion: c.suggestion || null,
             })),
           },
@@ -168,9 +172,9 @@ export class PrReviewProcessor extends WorkerHost {
       });
 
       // Update aggregate metrics for this repository
-      const highCount = aiResult.comments.filter(c => c.severity === 'HIGH').length;
-      const mediumCount = aiResult.comments.filter(c => c.severity === 'MEDIUM').length;
-      const lowCount = aiResult.comments.filter(c => c.severity === 'LOW').length;
+      const highCount = commentsArray.filter(c => c.severity === 'HIGH').length;
+      const mediumCount = commentsArray.filter(c => c.severity === 'MEDIUM').length;
+      const lowCount = commentsArray.filter(c => c.severity === 'LOW').length;
 
       await this.prisma.reviewMetric.create({
         data: {

@@ -34,7 +34,7 @@ export class SettingsService {
           fallbackModel: 'arcee-ai/trinity-large-thinking:free',
           isFallbackEnabled: true,
           temperature: 0.1,
-          maxTokens: 2048,
+          maxTokens: 30000,
           bypassSignature: true,
         },
       });
@@ -103,7 +103,7 @@ export class SettingsService {
           fallbackModel: updateData.fallbackModel || 'arcee-ai/trinity-large-thinking:free',
           isFallbackEnabled: updateData.isFallbackEnabled ?? true,
           temperature: updateData.temperature ?? 0.1,
-          maxTokens: updateData.maxTokens ?? 2048,
+          maxTokens: updateData.maxTokens ?? 30000,
           bypassSignature: updateData.bypassSignature ?? true,
         },
       });

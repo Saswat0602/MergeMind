@@ -40,23 +40,9 @@ export class AiService {
     let fallbackModel = 'arcee-ai/trinity-large-thinking:free';
     let isFallbackEnabled = true;
     let temperature = 0.1;
-    let maxTokens = 2048;
-    let systemPrompt = `You are a professional, senior software engineer and security auditor.
-Your job is to review a Git Pull Request diff and provide:
-1. A concise, one-sentence or two-sentence summary of what the PR accomplishes.
-2. A severity score from 0 (perfect, no issues) to 100 (critical vulnerabilities found, e.g. SQL injection, leaked secrets).
-3. A list of constructive review comments focused on:
-   - **SECURITY**: Exposed secrets/keys, SQL injections, lack of input validation, XSS, insecure deserialization, etc.
-   - **PERFORMANCE**: N+1 queries, heavy loops, missing indexes, blocking synchronous calls.
-   - **STYLE**: Dead code, massive functions, duplicate logic, very bad naming.
+    let maxTokens = 30000;
 
-For each issue, specify:
-- "filePath": Exact file path.
-- "lineNumber": The line number in the new file where the issue occurs (must be a line modified or added in the diff!).
-- "content": Clear description of why this is an issue and how to fix it.
-- "severity": "HIGH", "MEDIUM", or "LOW".
-- "type": "SECURITY", "PERFORMANCE", or "STYLE".
-- "suggestion": (Optional) Direct drop-in code fix block for this line.
+    const jsonFormatInstructions = `
 
 You MUST respond strictly in valid JSON format matching the following TypeScript interface:
 {
@@ -77,6 +63,23 @@ Crucial rules:
 2. If there are no issues, keep the "comments" array empty. Do not invent minor or nitpicky style rules just to fill it.
 3. Ensure the JSON is completely valid and escaped properly.`;
 
+    let systemPrompt = `You are a professional, senior software engineer and security auditor.
+Your job is to review a Git Pull Request diff and provide:
+1. A concise, one-sentence or two-sentence summary of what the PR accomplishes.
+2. A severity score from 0 (perfect, no issues) to 100 (critical vulnerabilities found, e.g. SQL injection, leaked secrets).
+3. A list of constructive review comments focused on:
+   - **SECURITY**: Exposed secrets/keys, SQL injections, lack of input validation, XSS, insecure deserialization, etc.
+   - **PERFORMANCE**: N+1 queries, heavy loops, missing indexes, blocking synchronous calls.
+   - **STYLE**: Dead code, massive functions, duplicate logic, very bad naming.
+
+For each issue, specify:
+- "filePath": Exact file path.
+- "lineNumber": The line number in the new file where the issue occurs (must be a line modified or added in the diff!).
+- "content": Clear description of why this is an issue and how to fix it.
+- "severity": "HIGH", "MEDIUM", or "LOW".
+- "type": "SECURITY", "PERFORMANCE", or "STYLE".
+- "suggestion": (Optional) Direct drop-in code fix block for this line.${jsonFormatInstructions}`;
+
     if (dbSettings) {
       if (dbSettings.openRouterKey) {
         try {
@@ -90,7 +93,10 @@ Crucial rules:
       isFallbackEnabled = dbSettings.isFallbackEnabled;
       temperature = dbSettings.temperature ?? temperature;
       maxTokens = dbSettings.maxTokens ?? maxTokens;
-      systemPrompt = dbSettings.systemPrompt || systemPrompt;
+      
+      if (dbSettings.systemPrompt && dbSettings.systemPrompt.trim() !== '') {
+        systemPrompt = `${dbSettings.systemPrompt.trim()}${jsonFormatInstructions}`;
+      }
     }
 
     if (!apiKey) {
@@ -140,7 +146,7 @@ Analyze the diff and return the JSON review report.`;
       }
 
       responseData = await response.json();
-      responseText = responseData.choices[0]?.message?.content || '';
+      responseText = responseData.choices[0]?.message?.content || responseData.choices[0]?.message?.reasoning || '';
     } catch (primaryError) {
       if (!isFallbackEnabled) {
         this.logger.error(`AI Analysis failed for primary model ${primaryModel} and fallback model is disabled: ${primaryError.message}`);
@@ -176,7 +182,7 @@ Analyze the diff and return the JSON review report.`;
         }
 
         responseData = await response.json();
-        responseText = responseData.choices[0]?.message?.content || '';
+        responseText = responseData.choices[0]?.message?.content || responseData.choices[0]?.message?.reasoning || '';
       } catch (fallbackError) {
         this.logger.error(`AI Analysis failed completely for both primary and fallback models. Fallback error: ${fallbackError.message}`);
         throw new Error(`AI Analysis failed: Primary (${primaryModel}) error: ${primaryError.message} | Fallback (${fallbackModel}) error: ${fallbackError.message}`);
