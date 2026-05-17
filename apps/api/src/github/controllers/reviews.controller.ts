@@ -90,8 +90,10 @@ export class ReviewsController {
         cost: log.cost || 0.0,
         createdAt: log.createdAt,
         actionDescription: log.actionDescription || 'Pull Request Review Audit',
-        repositoryName: log.reviewResult?.pullRequest?.repository?.fullName || 'N/A',
-        prTitle: log.reviewResult?.pullRequest?.title || 'N/A',
+        repositoryName: log.reviewResult?.pullRequest?.repository?.fullName || 
+          (log.actionDescription?.includes('Handshake') ? 'System Connection' : 'N/A'),
+        prTitle: log.reviewResult?.pullRequest?.title || 
+          (log.actionDescription ? log.actionDescription.replace('Push Commit Audit: ', '').replace(/"/g, '') : 'N/A'),
         prNumber: log.reviewResult?.pullRequest?.number || 0,
       })),
       summary: {

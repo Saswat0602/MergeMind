@@ -189,7 +189,7 @@ export class PrReviewProcessor extends WorkerHost {
       if (isPushEvent) {
         if (reviewResult.comments.length > 0) {
           const githubComments = reviewResult.comments.map(c => {
-            let body = `### 🤖 MergeMind Commit Diagnostics
+            let body = `###  MergeMind Commit Diagnostics
 **Type:** \`${c.type}\` | **Severity:** \`${c.severity}\`
 
 ${c.content}`;

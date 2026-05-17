@@ -39,7 +39,13 @@ export function UsageLogsTable({ logs }: UsageLogsTableProps) {
                       <div className="flex items-center gap-1.5 text-xs text-indigo-200/40 font-mono">
                         <span className="text-indigo-400/80 font-medium">{log.repositoryName}</span>
                         <span>•</span>
-                        <span>{log.prNumber < 0 ? 'Branch Push' : `PR #${log.prNumber}`}</span>
+                        <span>
+                          {log.prNumber < 0 
+                            ? 'Branch Push' 
+                            : log.prNumber === 0 
+                              ? (log.actionDescription?.includes('Handshake') ? 'Self-Test' : 'System Log') 
+                              : `PR #${log.prNumber}`}
+                        </span>
                       </div>
                     </div>
                   </td>

@@ -95,6 +95,7 @@ export interface LogRecord {
   repositoryName: string;
   prTitle: string;
   prNumber: number;
+  actionDescription?: string;
 }
 
 export interface UsageSummary {

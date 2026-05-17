@@ -302,6 +302,7 @@ Analyze the diff and return the JSON review report.`;
     const cost = (promptTokens * 0.15 + completionTokens * 0.60) / 1000000;
     const parsedJson = this.parseJsonResilient(responseText);
     const sanitized = this.sanitizeReviewResponse(parsedJson);
+    this.logger.log(`Parsed AI response successfully. Model: ${model}. Tokens: ${promptTokens} prompt / ${completionTokens} completion. Latency: ${latencyMs}ms`);
 
     // 📊 Phase 2: Storing the log details inside database on every single model invocation
     const log = await this.prisma.aiUsageLog.create({
