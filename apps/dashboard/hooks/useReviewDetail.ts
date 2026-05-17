@@ -4,7 +4,7 @@ import { PRDetails } from '../types';
 export function useReviewDetail(id: string) {
   const [pr, setPr] = useState<PRDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'ALL' | 'SECURITY' | 'PERFORMANCE' | 'STYLE' | 'DIFF'>('ALL');
+  const [activeTab, setActiveTab] = useState<'SUMMARY' | 'ALL' | 'SECURITY' | 'PERFORMANCE' | 'STYLE' | 'DIFF'>('SUMMARY');
 
   // Interactive Code Sandbox States
   const [editedSuggestions, setEditedSuggestions] = useState<Record<string, string>>({});
@@ -96,7 +96,7 @@ export function useReviewDetail(id: string) {
 
   const filteredComments = useMemo(() => {
     if (activeTab === 'ALL') return comments;
-    if (activeTab === 'DIFF') return [];
+    if (activeTab === 'DIFF' || activeTab === 'SUMMARY') return [];
     return comments.filter(c => c.type === activeTab);
   }, [comments, activeTab]);
 

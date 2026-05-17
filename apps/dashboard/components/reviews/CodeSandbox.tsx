@@ -76,7 +76,7 @@ export function CodeSandbox({
               const val = e.target.value;
               setEditedSuggestions(prev => ({ ...prev, [comment.id]: val }));
             }}
-            className="flex-1 w-full bg-transparent text-slate-100 font-mono text-[11px] leading-5 p-4 outline-none resize-none border-none focus:ring-0 placeholder-slate-600 min-h-[120px]"
+            className="flex-1 min-w-0 w-full bg-transparent text-slate-100 font-mono text-[11px] leading-5 p-4 outline-none resize-none border-none focus:ring-0 placeholder-slate-600 min-h-[120px]"
             style={{ whiteSpace: 'pre', overflowX: 'auto' }}
             spellCheck="false"
           />
@@ -84,13 +84,13 @@ export function CodeSandbox({
 
         {/* Commit Actions Panel */}
         <div className="bg-[#0b0e18] px-4 py-3 border-t border-white/5 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
-          <span className="text-[10px] text-slate-500 font-mono flex items-center gap-1">
-            <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <span className="text-[10px] text-slate-500 font-mono flex items-center gap-1 min-w-0">
+            <svg className="w-3.5 h-3.5 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
-            Will push directly to branch `{branchName || 'main'}`
+            <span className="truncate">Will push directly to branch `{branchName || 'main'}`</span>
           </span>
-          <div className="flex items-center gap-3 justify-end">
+          <div className="flex items-center gap-3 justify-end shrink-0">
             {applySuccessId === comment.id ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

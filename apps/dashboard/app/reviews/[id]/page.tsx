@@ -13,10 +13,11 @@ interface ReviewPageProps {
   params: Promise<{ id: string }>;
 }
 
-const TABS = ['ALL', 'SECURITY', 'PERFORMANCE', 'STYLE', 'DIFF'] as const;
+const TABS = ['SUMMARY', 'ALL', 'SECURITY', 'PERFORMANCE', 'STYLE', 'DIFF'] as const;
 type Tab = typeof TABS[number];
 
 const TAB_LABELS: Record<Tab, string> = {
+  SUMMARY: 'Summary',
   ALL: 'All Findings',
   SECURITY: 'Security',
   PERFORMANCE: 'Performance',
@@ -86,7 +87,7 @@ export default function ReviewPage({ params }: ReviewPageProps) {
   const sev  = (severity: string) => SEVERITY_MAP[severity] ?? 'badge-neutral';
 
   const countForTab = (tab: Tab) => {
-    if (tab === 'DIFF') return null;
+    if (tab === 'DIFF' || tab === 'SUMMARY') return null;
     if (tab === 'ALL')  return (latestReview?.comments?.length ?? 0);
     return latestReview?.comments?.filter(c => c.type === tab).length ?? 0;
   };
@@ -118,24 +119,11 @@ export default function ReviewPage({ params }: ReviewPageProps) {
         }
       />
 
-      {/* ── Two-column grid ──────────────────────────────────── */}
-      <div className="review-grid" style={{
-        display: 'grid',
-        gridTemplateColumns: '260px 1fr',
-        gap: 20,
-        alignItems: 'flex-start',
-      }}>
+      {/* ── Main Layout ──────────────────────────────────── */}
+      <div className="flex flex-col gap-6 w-full max-w-[1200px] mx-auto min-w-0">
 
-        {/* ── Left: summary panel (sticky) ─────────────────── */}
-        <div style={{ position: 'sticky', top: 16 }}>
-          <ReviewSummary latestReview={latestReview} usageLogs={usageLogs} />
-        </div>
-
-        {/* ── Right: tab panel ─────────────────────────────── */}
-        <div style={{ minWidth: 0 }}>
-
-          {/* Tab bar */}
-          <div className="tab-list" style={{ marginBottom: 16 }}>
+        {/* Tab bar */}
+        <div className="tab-list" style={{ marginBottom: 16 }}>
             {TABS.map(tab => {
               const count = countForTab(tab);
               return (
@@ -163,7 +151,9 @@ export default function ReviewPage({ params }: ReviewPageProps) {
           </div>
 
           {/* Tab content */}
-          {activeTab === 'DIFF' ? (
+          {activeTab === 'SUMMARY' ? (
+            <ReviewSummary latestReview={latestReview} usageLogs={usageLogs} />
+          ) : activeTab === 'DIFF' ? (
             <DiffViewer gitDiff={latestReview?.gitDiff} />
           ) : filteredComments.length === 0 ? (
             <div className="card" style={{
@@ -196,6 +186,8 @@ export default function ReviewPage({ params }: ReviewPageProps) {
                         border: '1px solid var(--border-soft)',
                         borderRadius: 4, padding: '2px 7px',
                         fontFamily: 'monospace',
+                        wordBreak: 'break-all',
+                        whiteSpace: 'normal',
                       }}>
                         {comment.filePath}
                         {comment.lineNumber ? ` : ${comment.lineNumber}` : ''}
@@ -234,7 +226,6 @@ export default function ReviewPage({ params }: ReviewPageProps) {
               })}
             </div>
           )}
-        </div>
       </div>
     </div>
   );

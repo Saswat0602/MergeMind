@@ -55,11 +55,14 @@ export function ReviewSummary({ latestReview, usageLogs }: ReviewSummaryProps) {
   if (!latestReview) return null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* Score ring */}
-      <ScoreRing score={latestReview.severityScore} />
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Left Column: Score */}
+      <div className="flex flex-col gap-6 lg:col-span-1">
+        <ScoreRing score={latestReview.severityScore} />
+      </div>
 
-      {/* AI Summary */}
+      {/* Right Column: Details */}
+      <div className="flex flex-col gap-6 lg:col-span-2">
       <div className="card" style={{ padding: '16px 18px' }}>
         <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-secondary)', marginBottom: 10 }}>
           AI Summary
@@ -97,7 +100,8 @@ export function ReviewSummary({ latestReview, usageLogs }: ReviewSummaryProps) {
             </div>
           ))}
         </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
