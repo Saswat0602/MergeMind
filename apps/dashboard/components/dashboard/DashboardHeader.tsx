@@ -5,6 +5,7 @@ interface DashboardHeaderProps {
   onRefresh: () => void;
 }
 
+
 export function DashboardHeader({ refreshing, onRefresh }: DashboardHeaderProps) {
   return (
     <header className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-slate-800/40 pb-6 z-10">
