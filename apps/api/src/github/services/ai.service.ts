@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@mergemind/database';
 import { decrypt } from '../../settings/utils/crypto';
 import { ScrubberService } from './scrubber.service';
+import { filterAndTruncateDiff } from '../utils/diff-filter';
 
 export interface AiReviewComment {
   filePath: string;
@@ -115,8 +116,13 @@ For each issue, specify:
       throw new Error('OpenRouter API key is not configured in settings or environment.');
     }
 
+    const { filteredDiff, skippedCount } = filterAndTruncateDiff(diffContent);
+    if (skippedCount > 0) {
+      this.logger.log(`PR Diff Filter: Processed diff. Skipped ${skippedCount} file(s) from AI audit based on exclusions/size limits.`);
+    }
+
     // 🔒 Phase 3: Scrub sensitive secrets/keys from Git Diff before sending to the LLM
-    const cleanDiff = this.scrubber.scrub(diffContent);
+    const cleanDiff = this.scrubber.scrub(filteredDiff);
 
     const userPrompt = `PR Title: ${prTitle}
 PR Description: ${prDescription || 'No description provided.'}
