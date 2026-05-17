@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 interface AIModel {
@@ -32,6 +32,7 @@ Adopt a clean, direct, and constructive technical persona. Offer actionable, pro
   // Interaction / Loading states
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'SUCCESS' | 'FAILED' | null>(null);
+  const [testErrorMessage, setTestErrorMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
@@ -43,17 +44,63 @@ Adopt a clean, direct, and constructive technical persona. Offer actionable, pro
     { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B Instruct (Free)', provider: 'Meta', tier: 'free', contextLength: '128k' },
   ];
 
+  // Fetch settings from database on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const res = await fetch('/api/settings');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.openRouterKey) setApiKey(data.openRouterKey);
+          if (data.defaultModel) setPrimaryModel(data.defaultModel);
+          if (data.fallbackModel) setFallbackModel(data.fallbackModel);
+          if (data.temperature !== undefined) setTemperature(data.temperature);
+          if (data.maxTokens !== undefined) setMaxTokens(data.maxTokens);
+          if (data.systemPrompt) setSystemPrompt(data.systemPrompt);
+          if (data.bypassSignature !== undefined) setBypassSignature(data.bypassSignature);
+        }
+      } catch (err) {
+        console.error('Failed to load AI configurations from backend:', err);
+      }
+    };
+    loadSettings();
+  }, []);
+
   const handleTestConnection = async () => {
     setTesting(true);
     setTestResult(null);
+    setTestErrorMessage('');
     
-    // Simulate real network request to check API key and OpenRouter access
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setTesting(false);
-    setTestResult('SUCCESS');
-    
-    // Auto-clear message after 4s
-    setTimeout(() => setTestResult(null), 4000);
+    try {
+      const res = await fetch('/api/settings/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          openRouterKey: apiKey,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTestResult('SUCCESS');
+      } else {
+        setTestResult('FAILED');
+        setTestErrorMessage(data.message || 'Authentication key test failed.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setTestResult('FAILED');
+      setTestErrorMessage('Network error: Failed to reach backend test API.');
+    } finally {
+      setTesting(false);
+      // Auto-clear message after 6s
+      setTimeout(() => {
+        setTestResult(null);
+        setTestErrorMessage('');
+      }, 6000);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -61,13 +108,40 @@ Adopt a clean, direct, and constructive technical persona. Offer actionable, pro
     setSaving(true);
     setSaveStatus(null);
     
-    // Simulate database upsert persistence logic
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setSaving(false);
-    setSaveStatus('AI parameters stored securely in Prisma Database!');
-    
-    // Auto-clear toast after 3s
-    setTimeout(() => setSaveStatus(null), 3000);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          openRouterKey: apiKey,
+          defaultModel: primaryModel,
+          fallbackModel: fallbackModel,
+          temperature,
+          maxTokens,
+          systemPrompt,
+          bypassSignature,
+          isFallbackEnabled: true,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.openRouterKey) setApiKey(data.openRouterKey);
+        setSaveStatus('AI parameters stored securely in Prisma Database!');
+      } else {
+        const data = await res.json();
+        setSaveStatus(`Failed to persist configurations: ${data.message || 'Unknown server error'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      setSaveStatus('Network error! Failed to store configurations.');
+    } finally {
+      setSaving(false);
+      // Auto-clear toast after 4s
+      setTimeout(() => setSaveStatus(null), 4000);
+    }
   };
 
   return (
@@ -159,7 +233,14 @@ Adopt a clean, direct, and constructive technical persona. Offer actionable, pro
                 {testResult === 'SUCCESS' && (
                   <div className="text-xs text-emerald-400 flex items-center gap-1.5 animate-fade-in font-medium">
                     <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    Success! OpenRouter API authenticated in 380ms
+                    Success! OpenRouter API authenticated successfully
+                  </div>
+                )}
+
+                {testResult === 'FAILED' && (
+                  <div className="text-xs text-rose-400 flex items-center gap-1.5 animate-fade-in font-medium max-w-xs break-words">
+                    <span className="flex h-2 w-2 shrink-0 rounded-full bg-rose-500" />
+                    {testErrorMessage}
                   </div>
                 )}
               </div>
