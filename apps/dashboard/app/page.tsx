@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '../components/ui/select';
 
 interface Stats {
   totalPrs: number;
@@ -28,12 +29,21 @@ interface PRRecord {
   createdAt: string;
 }
 
+interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+}
+
 export default function DashboardHome() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [prs, setPrs] = useState<PRRecord[]>([]);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,13 +51,12 @@ export default function DashboardHome() {
   const [selectedBranch, setSelectedBranch] = useState('ALL');
   const [selectedSeverity, setSelectedSeverity] = useState<'ALL' | 'CRITICAL' | 'MODERATE' | 'CLEAN'>('ALL');
 
-  const fetchData = async () => {
+  const fetchData = async (pageToFetch = 1) => {
     try {
       setError(null);
-      // Fetch stats and PRs in parallel via local proxied Next.js paths
       const [statsRes, prsRes] = await Promise.all([
         fetch('/api/dashboard/stats'),
-        fetch('/api/dashboard/prs'),
+        fetch(`/api/dashboard/prs?page=${pageToFetch}&limit=50`),
       ]);
 
       if (!statsRes.ok || !prsRes.ok) {
@@ -58,10 +67,22 @@ export default function DashboardHome() {
       const prsData = await prsRes.json();
 
       setStats(statsData);
-      setPrs(prsData);
+      
+      // Support paginated payload shape or flat array fallback
+      if (prsData && prsData.prs) {
+        setPrs(prsData.prs);
+        setPagination(prsData.pagination);
+      } else {
+        setPrs(prsData);
+        setPagination({
+          total: prsData.length,
+          page: 1,
+          limit: 50,
+          pages: 1
+        });
+      }
     } catch (err) {
       console.warn('Could not connect to API server. Loading gorgeous demo mock data:', err);
-      // Fallback to high-fidelity mock data so the dashboard is instantly fully reviewable!
       loadMockData();
     } finally {
       setLoading(false);
@@ -79,7 +100,7 @@ export default function DashboardHome() {
       totalTokens: 145020,
       totalCost: 0.087,
     });
-    setPrs([
+    const mockPrs = [
       {
         id: '1',
         number: 42,
@@ -150,16 +171,27 @@ export default function DashboardHome() {
         commitMessage: 'refactor: unify backend interface shapes',
         createdAt: new Date(Date.now()).toISOString(),
       }
-    ]);
+    ];
+    setPrs(mockPrs);
+    setPagination({
+      total: mockPrs.length,
+      page: 1,
+      limit: 50,
+      pages: 1
+    });
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchData(currentPage);
+  }, [currentPage]);
 
   const handleRefresh = () => {
     setRefreshing(true);
-    fetchData();
+    fetchData(currentPage);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
   };
 
   // Derive unique repositories & branch choices dynamically from data
@@ -313,7 +345,7 @@ export default function DashboardHome() {
       )}
 
       {/* Advanced Multi-Dimensional Filter bar */}
-      <section className="relative glass-card p-6 border border-white/5 rounded-xl bg-slate-900/5 backdrop-blur-md flex flex-col gap-5 z-10">
+      <section className="relative glass-card p-6 border border-white/5 rounded-xl bg-slate-900/5 backdrop-blur-md flex flex-col gap-5 z-20">
         <div>
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
             <svg className="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -334,7 +366,7 @@ export default function DashboardHome() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search PR, author, commit..."
-                className="w-full px-3.5 py-2 bg-[#090b14] border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-all font-medium"
+                className="w-full px-3.5 py-2 bg-[#090b14]/80 border border-slate-800/80 rounded-lg text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-all duration-300 font-medium"
               />
               {searchQuery && (
                 <button
@@ -347,51 +379,53 @@ export default function DashboardHome() {
             </div>
           </div>
 
-          {/* Repository Dropdown */}
+          {/* Repository Dropdown (Shadcn Custom Select) */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 pl-1">Filter Repository</label>
-            <select
-              value={selectedRepo}
-              onChange={(e) => setSelectedRepo(e.target.value)}
-              className="w-full px-3 py-2 bg-[#090b14] border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-violet-500 transition-all font-medium"
-            >
-              {repositories.map(repo => (
-                <option key={repo} value={repo}>
-                  {repo === 'ALL' ? 'All Repositories' : repo}
-                </option>
-              ))}
-            </select>
+            <Select value={selectedRepo} onValueChange={setSelectedRepo}>
+              <SelectTrigger>{selectedRepo === 'ALL' ? 'All Repositories' : selectedRepo}</SelectTrigger>
+              <SelectContent>
+                {repositories.map(repo => (
+                  <SelectItem key={repo} value={repo}>
+                    {repo === 'ALL' ? 'All Repositories' : repo}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Branch Dropdown */}
+          {/* Branch Dropdown (Shadcn Custom Select) */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 pl-1">Filter Branch Name</label>
-            <select
-              value={selectedBranch}
-              onChange={(e) => setSelectedBranch(e.target.value)}
-              className="w-full px-3 py-2 bg-[#090b14] border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-violet-500 transition-all font-medium font-mono"
-            >
-              {branches.map(branch => (
-                <option key={branch} value={branch}>
-                  {branch === 'ALL' ? 'All Branches' : branch}
-                </option>
-              ))}
-            </select>
+            <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+              <SelectTrigger className="font-mono">{selectedBranch === 'ALL' ? 'All Branches' : selectedBranch}</SelectTrigger>
+              <SelectContent>
+                {branches.map(branch => (
+                  <SelectItem key={branch} value={branch}>
+                    {branch === 'ALL' ? 'All Branches' : branch}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Severity Score Filter */}
+          {/* Severity Score Filter (Shadcn Custom Select) */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 pl-1">Threat Severity Rating</label>
-            <select
-              value={selectedSeverity}
-              onChange={(e) => setSelectedSeverity(e.target.value as any)}
-              className="w-full px-3 py-2 bg-[#090b14] border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-violet-500 transition-all font-medium"
-            >
-              <option value="ALL">All Levels</option>
-              <option value="CRITICAL">Critical Threat (&gt; 70)</option>
-              <option value="MODERATE">Moderate Severity (30 - 70)</option>
-              <option value="CLEAN">Clean Code (&lt; 30)</option>
-            </select>
+            <Select value={selectedSeverity} onValueChange={(val) => setSelectedSeverity(val as any)}>
+              <SelectTrigger>
+                {selectedSeverity === 'ALL' && 'All Levels'}
+                {selectedSeverity === 'CRITICAL' && 'Critical Threat (> 70)'}
+                {selectedSeverity === 'MODERATE' && 'Moderate Severity (30 - 70)'}
+                {selectedSeverity === 'CLEAN' && 'Clean Code (< 30)'}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Levels</SelectItem>
+                <SelectItem value="CRITICAL">Critical Threat (&gt; 70)</SelectItem>
+                <SelectItem value="MODERATE">Moderate Severity (30 - 70)</SelectItem>
+                <SelectItem value="CLEAN">Clean Code (&lt; 30)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </section>
@@ -508,7 +542,7 @@ export default function DashboardHome() {
                             className="inline-flex items-center gap-1 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:shadow-[0_0_20px_rgba(99,102,241,0.5)]"
                           >
                             Report
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                             </svg>
                           </Link>
@@ -525,6 +559,31 @@ export default function DashboardHome() {
             </table>
           )}
         </div>
+
+        {/* Dynamic Pagination Controls */}
+        {pagination && pagination.pages > 1 && (
+          <div className="flex justify-between items-center border-t border-slate-800/40 pt-4 mt-2">
+            <span className="text-[11px] text-slate-500 font-medium">
+              Showing page {pagination.page} of {pagination.pages} ({pagination.total} total PRs)
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                disabled={pagination.page <= 1}
+                onClick={() => handlePageChange(pagination.page - 1)}
+                className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded bg-slate-900/40 border border-slate-800 text-slate-300 hover:bg-slate-800/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                Previous
+              </button>
+              <button
+                disabled={pagination.page >= pagination.pages}
+                onClick={() => handlePageChange(pagination.page + 1)}
+                className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded bg-slate-900/40 border border-slate-800 text-slate-300 hover:bg-slate-800/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '../../components/ui/select';
 
 interface AIModel {
   id: string;
@@ -374,7 +375,7 @@ Adopt a clean, direct, and constructive technical persona. Offer actionable, pro
                 </div>
               </div>
 
-              <div className="glass-card p-6 flex flex-col gap-5 border border-white/5 bg-slate-900/20 backdrop-blur-xl rounded-xl">
+              <div className="glass-card p-6 flex flex-col gap-5 border border-white/5 bg-slate-900/20 backdrop-blur-xl rounded-xl relative z-30">
                 <div>
                   <h3 className="text-base font-bold text-white flex items-center gap-2">
                     <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -388,32 +389,34 @@ Adopt a clean, direct, and constructive technical persona. Offer actionable, pro
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Primary Model</label>
-                    <select
-                      value={primaryModel}
-                      onChange={(e) => setPrimaryModel(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-[#0a0c16] border border-slate-800 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-all"
-                    >
-                      {availableModels.map((model) => (
-                        <option key={model.id} value={model.id}>
-                          {model.name}
-                        </option>
-                      ))}
-                    </select>
+                    <Select value={primaryModel} onValueChange={setPrimaryModel}>
+                      <SelectTrigger>
+                        {availableModels.find(m => m.id === primaryModel)?.name || 'Select Primary Model'}
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableModels.map((model) => (
+                          <SelectItem key={model.id} value={model.id}>
+                            {model.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Fallback Model</label>
-                    <select
-                      value={fallbackModel}
-                      onChange={(e) => setFallbackModel(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-[#0a0c16] border border-slate-800 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-all"
-                    >
-                      {availableModels.map((model) => (
-                        <option key={model.id} value={model.id}>
-                          {model.name}
-                        </option>
-                      ))}
-                    </select>
+                    <Select value={fallbackModel} onValueChange={setFallbackModel}>
+                      <SelectTrigger>
+                        {availableModels.find(m => m.id === fallbackModel)?.name || 'Select Fallback Model'}
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableModels.map((model) => (
+                          <SelectItem key={model.id} value={model.id}>
+                            {model.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>

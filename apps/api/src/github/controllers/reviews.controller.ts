@@ -1,4 +1,4 @@
-import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Param, Query, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@mergemind/database';
 
 @Controller('dashboard')
@@ -101,9 +101,18 @@ export class ReviewsController {
   }
 
   @Get('prs')
-  async getPRs() {
+  async getPRs(
+    @Query('page') page = '1',
+    @Query('limit') limit = '50',
+  ) {
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = parseInt(limit, 10) || 50;
+    const skip = (pageNum - 1) * limitNum;
+
     const prs = await this.prisma.pullRequest.findMany({
       orderBy: { createdAt: 'desc' },
+      skip,
+      take: limitNum,
       include: {
         repository: true,
         reviews: {
@@ -117,7 +126,9 @@ export class ReviewsController {
       },
     });
 
-    return prs.map(pr => {
+    const total = await this.prisma.pullRequest.count();
+
+    const formattedPrs = prs.map(pr => {
       const latestReview = pr.reviews[0];
       const latestJob = pr.jobs[0];
 
@@ -136,6 +147,16 @@ export class ReviewsController {
         createdAt: pr.createdAt,
       };
     });
+
+    return {
+      prs: formattedPrs,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(total / limitNum),
+      }
+    };
   }
 
   @Get('prs/:id')
