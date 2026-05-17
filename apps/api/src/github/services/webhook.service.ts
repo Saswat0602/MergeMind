@@ -117,6 +117,7 @@ export class WebhookService {
         isPushEvent: false,
       },
       {
+        jobId: `pr-${pull_request.number}-${pull_request.head.sha}`,
         attempts: 3,
         backoff: {
           type: 'exponential',
@@ -254,6 +255,7 @@ export class WebhookService {
         isPushEvent: true,
       },
       {
+        jobId: `push-${after}`,
         attempts: 3,
         backoff: {
           type: 'exponential',

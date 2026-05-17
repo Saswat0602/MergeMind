@@ -23,16 +23,34 @@ export class WebhookController {
     private readonly prisma: PrismaService,
   ) {}
 
+  private readonly processedDeliveries = new Set<string>();
+
   @Post()
   async handleWebhook(
     @Headers('x-hub-signature-256') signature: string,
     @Headers('x-github-event') githubEvent: string,
+    @Headers('x-github-delivery') deliveryId: string,
     @Body() payload: SharedTypes.WebhookPayload,
   ) {
     await this.verifySignature(payload, signature);
 
+    if (deliveryId) {
+      if (this.processedDeliveries.has(deliveryId)) {
+        this.logger.warn(`Deduplicated incoming webhook. Delivery ID ${deliveryId} already processed.`);
+        return { received: true, deduplicated: true };
+      }
+      this.processedDeliveries.add(deliveryId);
+      // Limit size of set to avoid memory growth
+      if (this.processedDeliveries.size > 200) {
+        const first = this.processedDeliveries.values().next().value;
+        if (first !== undefined) {
+          this.processedDeliveries.delete(first);
+        }
+      }
+    }
+
     this.logger.log(
-      `Received GitHub webhook event: ${githubEvent} (action: ${payload.action || 'none'})`,
+      `Received GitHub webhook event: ${githubEvent} (action: ${payload.action || 'none'}) [Delivery: ${deliveryId || 'N/A'}]`,
     );
 
     if (githubEvent === 'pull_request') {
