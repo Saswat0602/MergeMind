@@ -3,7 +3,6 @@
 import { useDashboardData } from '../hooks/useDashboardData';
 import { DashboardHeader } from '../components/dashboard/DashboardHeader';
 import { KpiCards } from '../components/dashboard/KpiCards';
-import { QualityChart } from '../components/dashboard/QualityChart';
 import { ThreatHeatmap } from '../components/dashboard/ThreatHeatmap';
 import { FiltersBar } from '../components/dashboard/FiltersBar';
 import { PRTable } from '../components/dashboard/PRTable';
@@ -49,11 +48,7 @@ export default function DashboardHome() {
       {/* KPI Cards Row */}
       <KpiCards stats={stats} />
 
-      {/* Analytics & Charts */}
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10">
-        <QualityChart />
-        <ThreatHeatmap />
-      </section>
+ 
 
       {/* Filter bar */}
       <FiltersBar
