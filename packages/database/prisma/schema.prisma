@@ -100,8 +100,8 @@ model AnalysisJob {
 
 model ReviewResult {
   id            String          @id @default(uuid())
-  pullRequestId String
-  pullRequest   PullRequest     @relation(fields: [pullRequestId], references: [id])
+  pullRequestId String?
+  pullRequest   PullRequest?    @relation(fields: [pullRequestId], references: [id])
   commitSha     String?
   summary       String?         @db.Text
   severityScore Int?
