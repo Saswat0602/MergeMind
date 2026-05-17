@@ -176,3 +176,13 @@ model PromptTemplate {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model AiSettings {
+  id                String   @id @default(uuid())
+  openRouterKey     String?
+  defaultModel      String   @default("deepseek/deepseek-v4-flash:free")
+  fallbackModel     String   @default("arcee-ai/trinity-large-thinking:free")
+  isFallbackEnabled Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
