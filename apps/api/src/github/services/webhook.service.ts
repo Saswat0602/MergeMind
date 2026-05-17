@@ -194,8 +194,9 @@ export class WebhookService {
     });
 
     // 3. Create or Upsert a Special "Branch Commit Push" PullRequest record
-    const pseudoNumber = this.getStableNegativeNumber(branchName);
+    const pseudoNumber = this.getStableNegativeNumber(after);
     const latestCommit = commits[commits.length - 1];
+    const shortSha = after.substring(0, 7);
 
     const pr = await this.prisma.pullRequest.upsert({
       where: {
@@ -205,7 +206,7 @@ export class WebhookService {
         },
       },
       update: {
-        title: `Branch Push: ${branchName}`,
+        title: `Branch Push: ${branchName} (${shortSha})`,
         state: 'open',
         headSha: after,
         headBranch: branchName,
@@ -214,13 +215,13 @@ export class WebhookService {
       create: {
         number: pseudoNumber,
         githubId: pseudoNumber, // negative unique ID to avoid conflict with standard GitHub IDs
-        title: `Branch Push: ${branchName}`,
+        title: `Branch Push: ${branchName} (${shortSha})`,
         state: 'open',
         authorHandle: latestCommit?.author?.username || repository.owner.login,
         headSha: after,
         headBranch: branchName,
         baseBranch: branchName,
-        htmlUrl: `https://github.com/${repository.full_name}/tree/${branchName}`,
+        htmlUrl: `https://github.com/${repository.full_name}/commit/${after}`,
         repositoryId: repo.id,
       },
     });

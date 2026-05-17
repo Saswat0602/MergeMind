@@ -136,7 +136,7 @@ export class PrReviewProcessor extends WorkerHost {
       // 6. Save ReviewResult and Comments to Database
       const reviewResult = await this.prisma.reviewResult.create({
         data: {
-          pullRequestId: isPushEvent ? null : pullRequestId,
+          pullRequestId: pullRequestId,
           commitSha: headSha,
           summary: aiResult.summary,
           severityScore: aiResult.severityScore,
