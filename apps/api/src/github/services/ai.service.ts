@@ -133,25 +133,67 @@ Analyze the diff and return the JSON review report.`;
       this.logger.log(`Consensus Peer-Review active. Dispatching concurrent audits: ${primaryModel} + ${fallbackModel}`);
       const logIds: string[] = [];
 
-      try {
-        const [res1, res2] = await Promise.all([
-          this.executeLlmCall(apiKey, primaryModel, systemPrompt, userPrompt, temperature, maxTokens, `${actionDescription} (Consensus Primary)`),
-          this.executeLlmCall(apiKey, fallbackModel, systemPrompt, userPrompt, temperature, maxTokens, `${actionDescription} (Consensus Peer)`),
-        ]);
+      const [pResult, pPeer] = await Promise.allSettled([
+        this.executeLlmCall(apiKey, primaryModel, systemPrompt, userPrompt, temperature, maxTokens, `${actionDescription} (Consensus Primary)`),
+        this.executeLlmCall(apiKey, fallbackModel, systemPrompt, userPrompt, temperature, maxTokens, `${actionDescription} (Consensus Peer)`),
+      ]);
 
+      const primarySuccess = pResult.status === 'fulfilled';
+      const peerSuccess = pPeer.status === 'fulfilled';
+
+      if (primarySuccess && peerSuccess) {
+        const res1 = pResult.value;
+        const res2 = pPeer.value;
         logIds.push(res1.logId, res2.logId);
-        const mergedResponse = this.mergeConsensusResponses(res1.response, res2.response);
-
+        
+        try {
+          const mergedResponse = this.mergeConsensusResponses(res1.response, res2.response);
+          return {
+            response: mergedResponse,
+            promptTokens: res1.promptTokens + res2.promptTokens,
+            completionTokens: res1.completionTokens + res2.completionTokens,
+            latencyMs: Math.max(res1.latencyMs, res2.latencyMs),
+            modelUsed: `${primaryModel} + ${fallbackModel}`,
+            logIds,
+          };
+        } catch (mergeErr) {
+          this.logger.warn(`Consensus merge failed: ${mergeErr.message}. Falling back to Primary model result directly.`);
+          return {
+            response: res1.response,
+            promptTokens: res1.promptTokens,
+            completionTokens: res1.completionTokens,
+            latencyMs: res1.latencyMs,
+            modelUsed: res1.modelUsed,
+            logIds: [res1.logId],
+          };
+        }
+      } else if (primarySuccess) {
+        const res1 = pResult.value;
+        this.logger.warn(`Consensus Peer model failed. Gracefully falling back to Primary model result directly without extra LLM calls.`);
         return {
-          response: mergedResponse,
-          promptTokens: res1.promptTokens + res2.promptTokens,
-          completionTokens: res1.completionTokens + res2.completionTokens,
-          latencyMs: Math.max(res1.latencyMs, res2.latencyMs),
-          modelUsed: `${primaryModel} + ${fallbackModel}`,
-          logIds,
+          response: res1.response,
+          promptTokens: res1.promptTokens,
+          completionTokens: res1.completionTokens,
+          latencyMs: res1.latencyMs,
+          modelUsed: res1.modelUsed,
+          logIds: [res1.logId],
         };
-      } catch (err) {
-        this.logger.warn(`Consensus parallel pipeline failed or model timed out: ${err.message}. Gracefully falling back to single model.`);
+      } else if (peerSuccess) {
+        const res2 = pPeer.value;
+        this.logger.warn(`Consensus Primary model failed. Gracefully falling back to Peer model result directly without extra LLM calls.`);
+        return {
+          response: res2.response,
+          promptTokens: res2.promptTokens,
+          completionTokens: res2.completionTokens,
+          latencyMs: res2.latencyMs,
+          modelUsed: res2.modelUsed,
+          logIds: [res2.logId],
+        };
+      } else {
+        const primaryErr = (pResult as PromiseRejectedResult).reason?.message || 'unknown error';
+        const peerErr = (pPeer as PromiseRejectedResult).reason?.message || 'unknown error';
+        this.logger.error(`Consensus parallel pipeline failed completely for both models. Primary error: ${primaryErr} | Peer error: ${peerErr}`);
+        throw new Error(`AI Analysis failed during Consensus Auditing: Primary model error: ${primaryErr} | Peer model error: ${peerErr}`);
       }
     }
 
@@ -259,6 +301,7 @@ Analyze the diff and return the JSON review report.`;
     // Cost estimation: $0.15/1M prompt, $0.60/1M completion tokens
     const cost = (promptTokens * 0.15 + completionTokens * 0.60) / 1000000;
     const parsedJson = this.parseJsonResilient(responseText);
+    const sanitized = this.sanitizeReviewResponse(parsedJson);
 
     // 📊 Phase 2: Storing the log details inside database on every single model invocation
     const log = await this.prisma.aiUsageLog.create({
@@ -274,7 +317,7 @@ Analyze the diff and return the JSON review report.`;
     });
 
     return {
-      response: parsedJson,
+      response: sanitized,
       promptTokens,
       completionTokens,
       latencyMs,
@@ -318,7 +361,7 @@ Analyze the diff and return the JSON review report.`;
     };
   }
 
-  private parseJsonResilient(text: string): AiReviewResponse {
+  private parseJsonResilient(text: string): any {
     let cleanText = text.trim();
 
     if (cleanText.includes('```')) {
@@ -330,15 +373,63 @@ Analyze the diff and return the JSON review report.`;
 
     const firstBrace = cleanText.indexOf('{');
     const lastBrace = cleanText.lastIndexOf('}');
+    
+    let jsonCandidate = cleanText;
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      cleanText = cleanText.substring(firstBrace, lastBrace + 1);
+      jsonCandidate = cleanText.substring(firstBrace, lastBrace + 1);
     }
 
     try {
-      return JSON.parse(cleanText) as AiReviewResponse;
-    } catch (error) {
-      this.logger.error(`Failed to parse AI JSON response. Raw text: ${text}`);
-      throw new Error(`AI returned malformed JSON: ${error.message}`);
+      return JSON.parse(jsonCandidate);
+    } catch (firstError) {
+      this.logger.warn(`JSON parsing failed on initial candidate. Attempting truncation repair. Error: ${firstError.message}`);
+      
+      try {
+        const lastCompleteObject = jsonCandidate.lastIndexOf('}');
+        if (lastCompleteObject !== -1) {
+          let truncated = jsonCandidate.substring(0, lastCompleteObject + 1);
+          
+          let openBraces = (truncated.match(/\{/g) || []).length;
+          let closeBraces = (truncated.match(/\}/g) || []).length;
+          let openBrackets = (truncated.match(/\[/g) || []).length;
+          let closeBrackets = (truncated.match(/\]/g) || []).length;
+          
+          if (openBrackets > closeBrackets) {
+            truncated += ']';
+          }
+          if (openBraces > closeBraces + 1) {
+            truncated += '}'.repeat(openBraces - closeBraces - 1);
+          }
+          truncated += '}';
+          
+          return JSON.parse(truncated);
+        }
+      } catch (repairError) {
+        this.logger.error(`Truncation repair failed: ${repairError.message}`);
+      }
+      
+      throw new Error(`AI returned malformed JSON: ${firstError.message}`);
     }
+  }
+
+  private sanitizeReviewResponse(res: any): AiReviewResponse {
+    const sanitized: AiReviewResponse = {
+      summary: typeof res?.summary === 'string' ? res.summary : 'No summary provided.',
+      severityScore: typeof res?.severityScore === 'number' ? res.severityScore : 0,
+      comments: Array.isArray(res?.comments) ? res.comments : [],
+    };
+
+    sanitized.comments = sanitized.comments
+      .filter(c => c && typeof c === 'object')
+      .map(c => ({
+        filePath: typeof c.filePath === 'string' ? c.filePath : 'unknown',
+        lineNumber: typeof c.lineNumber === 'number' ? c.lineNumber : 1,
+        content: typeof c.content === 'string' ? c.content : 'No comment content provided.',
+        severity: ['HIGH', 'MEDIUM', 'LOW'].includes(c.severity) ? c.severity : 'LOW',
+        type: ['SECURITY', 'PERFORMANCE', 'STYLE'].includes(c.type) ? c.type : 'STYLE',
+        suggestion: typeof c.suggestion === 'string' ? c.suggestion : undefined,
+      }));
+
+    return sanitized;
   }
 }
