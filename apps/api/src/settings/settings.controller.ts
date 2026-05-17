@@ -33,4 +33,34 @@ export class SettingsController {
   ) {
     return this.settingsService.testConnection(body.openRouterKey);
   }
+
+  @Get('github')
+  async getGitHubSettings() {
+    return this.settingsService.getGitHubSettings(false);
+  }
+
+  @Post('github')
+  async updateGitHubSettings(
+    @Body()
+    body: {
+      appId?: string;
+      privateKey?: string;
+      webhookSecret?: string;
+      clientId?: string;
+      clientSecret?: string;
+    },
+  ) {
+    return this.settingsService.updateGitHubSettings(body);
+  }
+
+  @Post('github/test')
+  async testGitHubConnection(
+    @Body()
+    body: {
+      appId?: string;
+      privateKey?: string;
+    },
+  ) {
+    return this.settingsService.testGitHubConnection(body.appId, body.privateKey);
+  }
 }

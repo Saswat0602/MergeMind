@@ -10,6 +10,8 @@ import { WebhookService } from '../services/webhook.service';
 import * as SharedTypes from '@mergemind/shared-types';
 import * as crypto from 'crypto';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '@mergemind/database';
+import { decrypt } from '../../settings/utils/crypto';
 
 @Controller('github/webhook')
 export class WebhookController {
@@ -18,6 +20,7 @@ export class WebhookController {
   constructor(
     private readonly webhookService: WebhookService,
     private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Post()
@@ -26,7 +29,7 @@ export class WebhookController {
     @Headers('x-github-event') githubEvent: string,
     @Body() payload: SharedTypes.WebhookPayload,
   ) {
-    this.verifySignature(payload, signature);
+    await this.verifySignature(payload, signature);
 
     this.logger.log(
       `Received GitHub webhook event: ${githubEvent} (action: ${payload.action || 'none'})`,
@@ -43,8 +46,28 @@ export class WebhookController {
     return { received: true };
   }
 
-  private verifySignature(payload: any, signature: string) {
-    let secret = this.configService.get<string>('GITHUB_WEBHOOK_SECRET');
+  private async verifySignature(payload: any, signature: string) {
+    let secret: string | undefined;
+
+    try {
+      const dbSettings = await this.prisma.gitHubSettings.findFirst();
+      const encryptionKey = this.configService.get<string>('ENCRYPTION_KEY') || '';
+
+      if (dbSettings && dbSettings.webhookSecret) {
+        try {
+          secret = decrypt(dbSettings.webhookSecret, encryptionKey);
+        } catch (decryptError) {
+          this.logger.error(`Failed to decrypt GitHub Webhook Secret from DB settings: ${decryptError.message}`);
+        }
+      }
+    } catch (dbError) {
+      this.logger.error(`Error querying GitHubSettings in verifySignature: ${dbError.message}`);
+    }
+
+    if (!secret) {
+      secret = this.configService.get<string>('GITHUB_WEBHOOK_SECRET');
+    }
+
     if (!secret) return; // Skip validation if secret is not set (not recommended for production)
 
     // Clean surrounding quotes if present from env file

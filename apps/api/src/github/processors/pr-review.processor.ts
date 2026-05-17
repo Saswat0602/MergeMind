@@ -28,6 +28,7 @@ export class PrReviewProcessor extends WorkerHost {
       beforeSha,
       afterSha,
       commitMessage,
+      branchName,
     } = job.data;
     
     this.logger.log(
@@ -142,6 +143,9 @@ export class PrReviewProcessor extends WorkerHost {
         data: {
           pullRequestId: pullRequestId,
           commitSha: headSha,
+          commitMessage: commitMessage || 'AI Code Diagnostics',
+          gitDiff: diff,
+          branchName: branchName || 'main',
           summary: summaryValue,
           severityScore: severityScoreValue,
           status: 'COMPLETED',

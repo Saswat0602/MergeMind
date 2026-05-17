@@ -2,19 +2,46 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Octokit } from '@octokit/rest';
 import { createAppAuth } from '@octokit/auth-app';
+import { PrismaService } from '@mergemind/database';
+import { decrypt } from '../../settings/utils/crypto';
 
 @Injectable()
 export class GithubService {
   private readonly logger = new Logger(GithubService.name);
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {}
 
-  private getAppOctokit(installationId: number): Octokit {
-    const appId = this.configService.get<string>('GITHUB_APP_ID');
-    let privateKey = this.configService.get<string>('GITHUB_PRIVATE_KEY');
+  private async getAppOctokit(installationId: number): Promise<Octokit> {
+    let appId: string | undefined;
+    let privateKey: string | undefined;
+
+    try {
+      const dbSettings = await this.prisma.gitHubSettings.findFirst();
+      const encryptionKey = this.configService.get<string>('ENCRYPTION_KEY') || '';
+
+      if (dbSettings && dbSettings.appId && dbSettings.privateKey) {
+        appId = dbSettings.appId;
+        try {
+          privateKey = decrypt(dbSettings.privateKey, encryptionKey);
+        } catch (decryptError) {
+          this.logger.error(`Failed to decrypt GitHub Private Key from DB settings: ${decryptError.message}`);
+        }
+      }
+    } catch (dbError) {
+      this.logger.error(`Error querying GitHubSettings from database: ${dbError.message}`);
+    }
+
+    // Fallback to environment variables if not resolved from database
+    if (!appId || !privateKey) {
+      appId = this.configService.get<string>('GITHUB_APP_ID');
+      privateKey = this.configService.get<string>('GITHUB_PRIVATE_KEY');
+    }
 
     if (!appId || !privateKey) {
-      throw new Error('GITHUB_APP_ID or GITHUB_PRIVATE_KEY is not set in environment');
+      throw new Error('GitHub App credentials (App ID or Private Key) are not configured in settings or environment.');
     }
 
     // Support base64 encoded private keys (common in production env vars)
@@ -46,7 +73,7 @@ export class GithubService {
     pullNumber: number,
   ): Promise<string> {
     try {
-      const octokit = this.getAppOctokit(installationId);
+      const octokit = await this.getAppOctokit(installationId);
       const response = await octokit.rest.pulls.get({
         owner,
         repo,
@@ -79,7 +106,7 @@ export class GithubService {
     }>,
   ): Promise<void> {
     try {
-      const octokit = this.getAppOctokit(installationId);
+      const octokit = await this.getAppOctokit(installationId);
 
       // GitHub pulls.createReview allows line field for inline comments since Octokit REST API v3
       await octokit.rest.pulls.createReview({
@@ -113,7 +140,7 @@ export class GithubService {
     head: string,
   ): Promise<string> {
     try {
-      const octokit = this.getAppOctokit(installationId);
+      const octokit = await this.getAppOctokit(installationId);
       const response = await octokit.rest.repos.compareCommits({
         owner,
         repo,
@@ -145,7 +172,7 @@ export class GithubService {
     }>,
   ): Promise<void> {
     try {
-      const octokit = this.getAppOctokit(installationId);
+      const octokit = await this.getAppOctokit(installationId);
 
       for (const comment of comments) {
         await octokit.rest.repos.createCommitComment({

@@ -112,6 +112,9 @@ export class WebhookService {
         repositoryFullname: repository.full_name,
         prNumber: pull_request.number,
         headSha: pull_request.head.sha,
+        commitMessage: pull_request.title,
+        branchName: pull_request.head.ref,
+        isPushEvent: false,
       },
       {
         attempts: 3,
@@ -246,6 +249,7 @@ export class WebhookService {
         afterSha: after,
         headSha: after,
         commitMessage: latestCommit?.message || 'Branch Push',
+        branchName: branchName,
         authorHandle: latestCommit?.author?.username || repository.owner.login,
         isPushEvent: true,
       },

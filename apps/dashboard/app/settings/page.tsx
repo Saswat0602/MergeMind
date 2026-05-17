@@ -12,6 +12,8 @@ interface AIModel {
 }
 
 export default function AISettingsPage() {
+  const [settingsTab, setSettingsTab] = useState<'AI' | 'GITHUB'>('AI');
+
   // Config state
   const [apiKey, setApiKey] = useState('sk-or-v1-****************************************');
   const [showKey, setShowKey] = useState(false);
@@ -28,6 +30,22 @@ export default function AISettingsPage() {
 Adopt a clean, direct, and constructive technical persona. Offer actionable, production-grade refactored code blocks in your responses.`
   );
   const [bypassSignature, setBypassSignature] = useState(true);
+
+  // GitHub state
+  const [gitHubAppId, setGitHubAppId] = useState('');
+  const [gitHubPrivateKey, setGitHubPrivateKey] = useState('');
+  const [gitHubWebhookSecret, setGitHubWebhookSecret] = useState('');
+  const [gitHubClientId, setGitHubClientId] = useState('');
+  const [gitHubClientSecret, setGitHubClientSecret] = useState('');
+  const [showGitHubPrivateKey, setShowGitHubPrivateKey] = useState(false);
+  const [showGitHubWebhookSecret, setShowGitHubWebhookSecret] = useState(false);
+  const [showGitHubClientSecret, setShowGitHubClientSecret] = useState(false);
+
+  const [testingGitHub, setTestingGitHub] = useState(false);
+  const [testGitHubResult, setTestGitHubResult] = useState<'SUCCESS' | 'FAILED' | null>(null);
+  const [testGitHubErrorMessage, setTestGitHubErrorMessage] = useState('');
+  const [savingGitHub, setSavingGitHub] = useState(false);
+  const [saveGitHubStatus, setSaveGitHubStatus] = useState<string | null>(null);
 
   // Interaction / Loading states
   const [testing, setTesting] = useState(false);
@@ -48,7 +66,11 @@ Adopt a clean, direct, and constructive technical persona. Offer actionable, pro
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const res = await fetch('/api/settings');
+        const [res, ghRes] = await Promise.all([
+          fetch('/api/settings'),
+          fetch('/api/settings/github'),
+        ]);
+
         if (res.ok) {
           const data = await res.json();
           if (data.openRouterKey) setApiKey(data.openRouterKey);
@@ -59,12 +81,95 @@ Adopt a clean, direct, and constructive technical persona. Offer actionable, pro
           if (data.systemPrompt) setSystemPrompt(data.systemPrompt);
           if (data.bypassSignature !== undefined) setBypassSignature(data.bypassSignature);
         }
+
+        if (ghRes.ok) {
+          const ghData = await ghRes.json();
+          if (ghData.appId) setGitHubAppId(ghData.appId);
+          if (ghData.privateKey) setGitHubPrivateKey(ghData.privateKey);
+          if (ghData.webhookSecret) setGitHubWebhookSecret(ghData.webhookSecret);
+          if (ghData.clientId) setGitHubClientId(ghData.clientId);
+          if (ghData.clientSecret) setGitHubClientSecret(ghData.clientSecret);
+        }
       } catch (err) {
-        console.error('Failed to load AI configurations from backend:', err);
+        console.error('Failed to load configurations from backend:', err);
       }
     };
     loadSettings();
   }, []);
+
+  const handleTestGitHubConnection = async () => {
+    setTestingGitHub(true);
+    setTestGitHubResult(null);
+    setTestGitHubErrorMessage('');
+
+    try {
+      const res = await fetch('/api/settings/github/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          appId: gitHubAppId,
+          privateKey: gitHubPrivateKey,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTestGitHubResult('SUCCESS');
+      } else {
+        setTestGitHubResult('FAILED');
+        setTestGitHubErrorMessage(data.message || 'Handshake rejected by GitHub App Endpoint.');
+      }
+    } catch (err) {
+      setTestGitHubResult('FAILED');
+      setTestGitHubErrorMessage('Network error: Failed to reach backend handshake API.');
+    } finally {
+      setTestingGitHub(false);
+      setTimeout(() => {
+        setTestGitHubResult(null);
+        setTestGitHubErrorMessage('');
+      }, 6000);
+    }
+  };
+
+  const handleSaveGitHub = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingGitHub(true);
+    setSaveGitHubStatus(null);
+
+    try {
+      const res = await fetch('/api/settings/github', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          appId: gitHubAppId,
+          privateKey: gitHubPrivateKey,
+          webhookSecret: gitHubWebhookSecret,
+          clientId: gitHubClientId,
+          clientSecret: gitHubClientSecret,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.privateKey) setGitHubPrivateKey(data.privateKey);
+        if (data.webhookSecret) setGitHubWebhookSecret(data.webhookSecret);
+        if (data.clientSecret) setGitHubClientSecret(data.clientSecret);
+        setSaveGitHubStatus('GitHub configurations stored securely in database!');
+      } else {
+        const data = await res.json();
+        setSaveGitHubStatus(`Failed: ${data.message || 'Unknown server error'}`);
+      }
+    } catch (err) {
+      setSaveGitHubStatus('Network error! Failed to store configurations.');
+    } finally {
+      setSavingGitHub(false);
+      setTimeout(() => setSaveGitHubStatus(null), 4000);
+    }
+  };
 
   const handleTestConnection = async () => {
     setTesting(true);
@@ -151,290 +256,508 @@ Adopt a clean, direct, and constructive technical persona. Offer actionable, pro
 
       <div className="relative max-w-5xl mx-auto px-6 py-10 z-10">
         {/* Navigation header */}
-        <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-800/40">
+        <header className="flex justify-between items-center mb-6 pb-4 border-b border-slate-800/40">
           <div className="flex items-center gap-4">
             <Link href="/" className="px-4 py-2 text-sm bg-white/5 border border-white/10 hover:bg-white/10 text-violet-300 rounded-lg backdrop-blur-md transition-all duration-300 flex items-center gap-2">
               ← Return to Dashboard
             </Link>
             <div className="h-5 w-[1px] bg-slate-800" />
             <h1 className="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-violet-300 via-indigo-200 to-purple-300">
-              AI Engine Configurations
+              System Configurations
             </h1>
           </div>
           <div className="text-[10px] uppercase font-bold tracking-widest text-slate-500 border border-slate-800/80 px-2 py-1 rounded bg-[#090b16]">
-            Engine Panel v1.4
+            Engine Panel v2.0
           </div>
         </header>
 
-        {/* Form Container */}
-        <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Left Column: API & Model parameters (2 columns on large screen) */}
-          <div className="lg:col-span-2 flex flex-col gap-6">
-            
-            {/* Card 1: OpenRouter Credentials */}
-            <div className="glass-card p-6 flex flex-col gap-5 border border-white/5 bg-slate-900/20 backdrop-blur-xl rounded-xl">
-              <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                  </svg>
-                  OpenRouter Credentials
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">Configure your active OpenRouter token to establish a connection to available LLM nodes.</p>
-              </div>
+        {/* Tab Selection */}
+        <div className="flex gap-6 mb-8 border-b border-slate-800/40 pb-3">
+          <button
+            type="button"
+            onClick={() => setSettingsTab('AI')}
+            className={`px-3 py-1.5 text-sm font-bold border-b-2 transition-all duration-200 ${
+              settingsTab === 'AI'
+                ? 'border-violet-500 text-white'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            AI Auditor Configurations
+          </button>
+          <button
+            type="button"
+            onClick={() => setSettingsTab('GITHUB')}
+            className={`px-3 py-1.5 text-sm font-bold border-b-2 transition-all duration-200 ${
+              settingsTab === 'GITHUB'
+                ? 'border-violet-500 text-white'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            GitHub Application Details
+          </button>
+        </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">OpenRouter API Key</label>
-                <div className="relative">
-                  <input
-                    type={showKey ? 'text' : 'password'}
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    className="w-full px-4 py-3 bg-[#0a0c16] border border-slate-800 rounded-lg text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-all font-mono"
-                    placeholder="sk-or-v1-..."
-                  />
+        {settingsTab === 'AI' ? (
+          /* AI Form */
+          <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 flex flex-col gap-6">
+              <div className="glass-card p-6 flex flex-col gap-5 border border-white/5 bg-slate-900/20 backdrop-blur-xl rounded-xl">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                    </svg>
+                    OpenRouter Credentials
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">Configure your active OpenRouter token to establish a connection to available LLM nodes.</p>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">OpenRouter API Key</label>
+                  <div className="relative">
+                    <input
+                      type={showKey ? 'text' : 'password'}
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      className="w-full px-4 py-3 bg-[#0a0c16] border border-slate-800 rounded-lg text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-all font-mono"
+                      placeholder="sk-or-v1-..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowKey(!showKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-200 transition"
+                    >
+                      {showKey ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => setShowKey(!showKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-200 transition"
+                    onClick={handleTestConnection}
+                    disabled={testing}
+                    className="px-4 py-2 text-xs font-bold rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 hover:border-slate-600 text-violet-300 disabled:opacity-50 transition-all flex items-center gap-2"
                   >
-                    {showKey ? (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                      </svg>
+                    {testing ? (
+                      <>
+                        <div className="w-3.5 h-3.5 rounded-full border border-violet-500/20 border-t-violet-500 animate-spin" />
+                        Authenticating...
+                      </>
                     ) : (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
+                      'Verify Key Connection'
                     )}
                   </button>
+
+                  {testResult === 'SUCCESS' && (
+                    <div className="text-xs text-emerald-400 flex items-center gap-1.5 animate-fade-in font-medium">
+                      <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                      Success! OpenRouter API authenticated successfully
+                    </div>
+                  )}
+
+                  {testResult === 'FAILED' && (
+                    <div className="text-xs text-rose-400 flex items-center gap-1.5 animate-fade-in font-medium max-w-xs break-words">
+                      <span className="flex h-2 w-2 shrink-0 rounded-full bg-rose-500" />
+                      {testErrorMessage}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="glass-card p-6 flex flex-col gap-5 border border-white/5 bg-slate-900/20 backdrop-blur-xl rounded-xl">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                    </svg>
+                    Model Settings & Fallbacks
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">Configure your active model configurations. Fallbacks are triggered automatically if the primary endpoint is congested.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Primary Model</label>
+                    <select
+                      value={primaryModel}
+                      onChange={(e) => setPrimaryModel(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-[#0a0c16] border border-slate-800 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-all"
+                    >
+                      {availableModels.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Fallback Model</label>
+                    <select
+                      value={fallbackModel}
+                      onChange={(e) => setFallbackModel(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-[#0a0c16] border border-slate-800 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-all"
+                    >
+                      {availableModels.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="glass-card p-6 flex flex-col gap-5 border border-white/5 bg-slate-900/20 backdrop-blur-xl rounded-xl">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                    </svg>
+                    Custom System Auditor Instructions
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">Provide custom prompt rules that define how the AI structures its code diagnostic feedback.</p>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <textarea
+                    value={systemPrompt}
+                    onChange={(e) => setSystemPrompt(e.target.value)}
+                    rows={6}
+                    className="w-full px-4 py-3 bg-[#0a0c16] border border-slate-800 rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-all leading-6 font-medium"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-6">
+              <div className="glass-card p-6 flex flex-col gap-6 border border-white/5 bg-slate-900/20 backdrop-blur-xl rounded-xl">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                    </svg>
+                    Execution Parameters
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">Fine-tune the temperature creativity and maximum length limitations.</p>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between items-center text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    <span>Temperature</span>
+                    <span className="text-violet-400 font-mono font-bold text-[13px]">{temperature}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.0"
+                    max="1.0"
+                    step="0.05"
+                    value={temperature}
+                    onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                    className="w-full accent-violet-500 cursor-pointer bg-slate-800"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                    <span>0.0 (Deterministic)</span>
+                    <span>1.0 (Creative)</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 mt-2">
+                  <div className="flex justify-between items-center text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    <span>Max Completion Tokens</span>
+                    <span className="text-violet-400 font-mono font-bold text-[13px]">{maxTokens}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="256"
+                    max="4096"
+                    step="128"
+                    value={maxTokens}
+                    onChange={(e) => setMaxTokens(parseInt(e.target.value))}
+                    className="w-full accent-violet-500 cursor-pointer bg-slate-800"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                    <span>256</span>
+                    <span>4096</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="glass-card p-6 flex flex-col gap-5 border border-white/5 bg-slate-900/20 backdrop-blur-xl rounded-xl">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    Development & Guardrails
+                  </h3>
+                </div>
+
+                <div className="flex justify-between items-center bg-black/20 p-4 border border-slate-800/80 rounded-lg">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-bold text-white">Local Signature Bypass</span>
+                    <span className="text-[10px] text-slate-400">Ignore HMAC errors in development mode</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setBypassSignature(!bypassSignature)}
+                    className={`w-10 h-6 rounded-full p-0.5 transition-colors duration-300 focus:outline-none ${bypassSignature ? 'bg-violet-500' : 'bg-slate-800'}`}
+                  >
+                    <div className={`w-5 h-5 rounded-full bg-white transition-transform duration-300 shadow-md ${bypassSignature ? 'translate-x-4' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+
+                <div className="p-4 border border-violet-500/10 bg-violet-500/5 rounded-lg text-xs leading-5 text-violet-300">
+                  <span className="font-semibold block text-white mb-1">💡 Developer Note</span>
+                  Your active OpenRouter primary model uses a **Free Tier** configuration. There is no active USD cost deducted from your credit balance.
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 mt-2">
                 <button
-                  type="button"
-                  onClick={handleTestConnection}
-                  disabled={testing}
-                  className="px-4 py-2 text-xs font-bold rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 hover:border-slate-600 text-violet-300 disabled:opacity-50 transition-all flex items-center gap-2"
+                  type="submit"
+                  disabled={saving}
+                  className="w-full py-3 text-sm font-bold uppercase tracking-wider rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {testing ? (
+                  {saving ? (
                     <>
-                      <div className="w-3.5 h-3.5 rounded-full border border-violet-500/20 border-t-violet-500 animate-spin" />
-                      Authenticating...
+                      <div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                      Persisting Settings...
                     </>
                   ) : (
-                    'Verify Key Connection'
+                    'Save Configurations'
                   )}
                 </button>
 
-                {testResult === 'SUCCESS' && (
-                  <div className="text-xs text-emerald-400 flex items-center gap-1.5 animate-fade-in font-medium">
-                    <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    Success! OpenRouter API authenticated successfully
-                  </div>
-                )}
-
-                {testResult === 'FAILED' && (
-                  <div className="text-xs text-rose-400 flex items-center gap-1.5 animate-fade-in font-medium max-w-xs break-words">
-                    <span className="flex h-2 w-2 shrink-0 rounded-full bg-rose-500" />
-                    {testErrorMessage}
+                {saveStatus && (
+                  <div className="p-3 text-center text-xs font-semibold border border-emerald-500/15 bg-emerald-500/10 text-emerald-400 rounded-lg animate-fade-in">
+                    {saveStatus}
                   </div>
                 )}
               </div>
             </div>
+          </form>
+        ) : (
+          /* GitHub Form */
+          <form onSubmit={handleSaveGitHub} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 flex flex-col gap-6">
+              
+              {/* Card 1: Core Credentials */}
+              <div className="glass-card p-6 flex flex-col gap-5 border border-white/5 bg-slate-900/20 backdrop-blur-xl rounded-xl">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    GitHub App Credentials
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Store details of your registered GitHub Integration App. Sensitive fields are encrypted using your workspace key prior to DB persistence.
+                  </p>
+                </div>
 
-            {/* Card 2: AI Core Models settings */}
-            <div className="glass-card p-6 flex flex-col gap-5 border border-white/5 bg-slate-900/20 backdrop-blur-xl rounded-xl">
-              <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                  </svg>
-                  Model Settings & Fallbacks
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">Configure your active model configurations. Fallbacks are triggered automatically if the primary endpoint is congested.</p>
-              </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* App ID */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">GitHub App ID</label>
+                    <input
+                      type="text"
+                      value={gitHubAppId}
+                      onChange={(e) => setGitHubAppId(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-[#0a0c16] border border-slate-800 rounded-lg text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-all font-mono"
+                      placeholder="e.g. 1049281"
+                    />
+                  </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Primary model */}
+                  {/* Client ID */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">GitHub Client ID</label>
+                    <input
+                      type="text"
+                      value={gitHubClientId}
+                      onChange={(e) => setGitHubClientId(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-[#0a0c16] border border-slate-800 rounded-lg text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-all font-mono"
+                      placeholder="Iv1.d8f763ab21e3c88a"
+                    />
+                  </div>
+                </div>
+
+                {/* Webhook Secret */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Primary Model</label>
-                  <select
-                    value={primaryModel}
-                    onChange={(e) => setPrimaryModel(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-[#0a0c16] border border-slate-800 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-all"
-                  >
-                    {availableModels.map((model) => (
-                      <option key={model.id} value={model.id}>
-                        {model.name}
-                      </option>
-                    ))}
-                  </select>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Webhook Secret Token</label>
+                  <div className="relative">
+                    <input
+                      type={showGitHubWebhookSecret ? 'text' : 'password'}
+                      value={gitHubWebhookSecret}
+                      onChange={(e) => setGitHubWebhookSecret(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-[#0a0c16] border border-slate-800 rounded-lg text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-all font-mono"
+                      placeholder="Enter webhook secret verification token..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowGitHubWebhookSecret(!showGitHubWebhookSecret)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-200 transition"
+                    >
+                      {showGitHubWebhookSecret ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
-                {/* Fallback model */}
+                {/* Client Secret */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Fallback Model</label>
-                  <select
-                    value={fallbackModel}
-                    onChange={(e) => setFallbackModel(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-[#0a0c16] border border-slate-800 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-all"
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">OAuth Client Secret</label>
+                  <div className="relative">
+                    <input
+                      type={showGitHubClientSecret ? 'text' : 'password'}
+                      value={gitHubClientSecret}
+                      onChange={(e) => setGitHubClientSecret(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-[#0a0c16] border border-slate-800 rounded-lg text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-all font-mono"
+                      placeholder="Enter Client Secret token..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowGitHubClientSecret(!showGitHubClientSecret)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-200 transition"
+                    >
+                      {showGitHubClientSecret ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Card 2: RSA Private Key */}
+              <div className="glass-card p-6 flex flex-col gap-5 border border-white/5 bg-slate-900/20 backdrop-blur-xl rounded-xl">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    App Private Key (.pem file content)
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Paste the multi-line RSA Private Key PEM content issued by GitHub for secure app authorization.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <div className="relative">
+                    <textarea
+                      value={gitHubPrivateKey}
+                      onChange={(e) => setGitHubPrivateKey(e.target.value)}
+                      rows={8}
+                      className="w-full px-4 py-3 bg-[#0a0c16] border border-slate-800 rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-all leading-6 font-mono"
+                      placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----"
+                    />
+                  </div>
+                </div>
+
+                {/* Handshake Tester */}
+                <div className="flex items-center gap-3 mt-2">
+                  <button
+                    type="button"
+                    onClick={handleTestGitHubConnection}
+                    disabled={testingGitHub}
+                    className="px-4 py-2 text-xs font-bold rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 hover:border-slate-600 text-violet-300 disabled:opacity-50 transition-all flex items-center gap-2"
                   >
-                    {availableModels.map((model) => (
-                      <option key={model.id} value={model.id}>
-                        {model.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
+                    {testingGitHub ? (
+                      <>
+                        <div className="w-3.5 h-3.5 rounded-full border border-violet-500/20 border-t-violet-500 animate-spin" />
+                        Verifying Signature...
+                      </>
+                    ) : (
+                      'Verify Handshake with GitHub App'
+                    )}
+                  </button>
 
-            {/* Card 3: Auditor Instructions Prompt */}
-            <div className="glass-card p-6 flex flex-col gap-5 border border-white/5 bg-slate-900/20 backdrop-blur-xl rounded-xl">
-              <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                  </svg>
-                  Custom System Auditor Instructions
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">Provide custom prompt rules that define how the AI structures its code diagnostic feedback.</p>
-              </div>
+                  {testGitHubResult === 'SUCCESS' && (
+                    <div className="text-xs text-emerald-400 flex items-center gap-1.5 animate-fade-in font-medium">
+                      <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                      Signature authenticated with GitHub!
+                    </div>
+                  )}
 
-              <div className="flex flex-col gap-2">
-                <textarea
-                  value={systemPrompt}
-                  onChange={(e) => setSystemPrompt(e.target.value)}
-                  rows={6}
-                  className="w-full px-4 py-3 bg-[#0a0c16] border border-slate-800 rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-all leading-6 font-medium"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Execution Parameters & Toggles */}
-          <div className="flex flex-col gap-6">
-            
-            {/* Card 4: Hyperparameters */}
-            <div className="glass-card p-6 flex flex-col gap-6 border border-white/5 bg-slate-900/20 backdrop-blur-xl rounded-xl">
-              <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                  </svg>
-                  Execution Parameters
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">Fine-tune the temperature creativity and maximum length limitations.</p>
-              </div>
-
-              {/* Temperature slider */}
-              <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  <span>Temperature</span>
-                  <span className="text-violet-400 font-mono font-bold text-[13px]">{temperature}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.0"
-                  max="1.0"
-                  step="0.05"
-                  value={temperature}
-                  onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                  className="w-full accent-violet-500 cursor-pointer bg-slate-800"
-                />
-                <div className="flex justify-between text-[10px] text-slate-500 mt-1">
-                  <span>0.0 (Deterministic)</span>
-                  <span>1.0 (Creative)</span>
+                  {testGitHubResult === 'FAILED' && (
+                    <div className="text-xs text-rose-400 flex items-center gap-1.5 animate-fade-in font-medium max-w-sm break-words">
+                      <span className="flex h-2 w-2 shrink-0 rounded-full bg-rose-500" />
+                      {testGitHubErrorMessage}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Max tokens slider */}
-              <div className="flex flex-col gap-2 mt-2">
-                <div className="flex justify-between items-center text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  <span>Max Completion Tokens</span>
-                  <span className="text-violet-400 font-mono font-bold text-[13px]">{maxTokens}</span>
-                </div>
-                <input
-                  type="range"
-                  min="256"
-                  max="4096"
-                  step="128"
-                  value={maxTokens}
-                  onChange={(e) => setMaxTokens(parseInt(e.target.value))}
-                  className="w-full accent-violet-500 cursor-pointer bg-slate-800"
-                />
-                <div className="flex justify-between text-[10px] text-slate-500 mt-1">
-                  <span>256</span>
-                  <span>4096</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 5: Local Bypass & Database details */}
-            <div className="glass-card p-6 flex flex-col gap-5 border border-white/5 bg-slate-900/20 backdrop-blur-xl rounded-xl">
-              <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                  Development & Guardrails
-                </h3>
-              </div>
-
-              {/* Bypass signatures toggle */}
-              <div className="flex justify-between items-center bg-black/20 p-4 border border-slate-800/80 rounded-lg">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-bold text-white">Local Signature Bypass</span>
-                  <span className="text-[10px] text-slate-400">Ignore HMAC errors in development mode</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setBypassSignature(!bypassSignature)}
-                  className={`w-10 h-6 rounded-full p-0.5 transition-colors duration-300 focus:outline-none ${bypassSignature ? 'bg-violet-500' : 'bg-slate-800'}`}
-                >
-                  <div className={`w-5 h-5 rounded-full bg-white transition-transform duration-300 shadow-md ${bypassSignature ? 'translate-x-4' : 'translate-x-0'}`} />
-                </button>
-              </div>
-
-              {/* Cost efficiency alert */}
-              <div className="p-4 border border-violet-500/10 bg-violet-500/5 rounded-lg text-xs leading-5 text-violet-300">
-                <span className="font-semibold block text-white mb-1">💡 Developer Note</span>
-                Your active OpenRouter primary model uses a **Free Tier** configuration. There is no active USD cost deducted from your credit balance.
-              </div>
             </div>
 
             {/* Save Button */}
-            <div className="flex flex-col gap-3 mt-2">
-              <button
-                type="submit"
-                disabled={saving}
-                className="w-full py-3 text-sm font-bold uppercase tracking-wider rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {saving ? (
-                  <>
-                    <div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-                    Persisting Settings...
-                  </>
-                ) : (
-                  'Save Configurations'
+            <div className="flex flex-col gap-6">
+              
+              <div className="glass-card p-6 flex flex-col gap-4 border border-white/5 bg-slate-900/20 backdrop-blur-xl rounded-xl text-xs leading-5">
+                <span className="font-bold text-white flex items-center gap-1">
+                  💡 Setup Information
+                </span>
+                <p className="text-slate-400">
+                  When creating your GitHub App, ensure you enable:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-slate-300 font-medium">
+                  <li>Pull Request: Read & Write</li>
+                  <li>Repository Metadata: Read-only</li>
+                  <li>Webhook Push & PR events</li>
+                </ul>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  type="submit"
+                  disabled={savingGitHub}
+                  className="w-full py-3 text-sm font-bold uppercase tracking-wider rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {savingGitHub ? (
+                    <>
+                      <div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                      Encrypting & Storing...
+                    </>
+                  ) : (
+                    'Save GitHub Credentials'
+                  )}
+                </button>
+
+                {saveGitHubStatus && (
+                  <div className="p-3 text-center text-xs font-semibold border border-emerald-500/15 bg-emerald-500/10 text-emerald-400 rounded-lg animate-fade-in">
+                    {saveGitHubStatus}
+                  </div>
                 )}
-              </button>
-
-              {saveStatus && (
-                <div className="p-3 text-center text-xs font-semibold border border-emerald-500/15 bg-emerald-500/10 text-emerald-400 rounded-lg animate-fade-in">
-                  {saveStatus}
-                </div>
-              )}
+              </div>
             </div>
-
-          </div>
-
-        </form>
-
+          </form>
+        )}
       </div>
     </div>
   );

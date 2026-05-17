@@ -131,6 +131,8 @@ export class ReviewsController {
         repositoryName: pr.repository.fullName,
         reviewStatus: latestReview?.status || latestJob?.status || 'PENDING',
         severityScore: latestReview?.severityScore ?? null,
+        branchName: latestReview?.branchName || pr.headBranch || 'main',
+        commitMessage: latestReview?.commitMessage || '',
         createdAt: pr.createdAt,
       };
     });

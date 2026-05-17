@@ -166,4 +166,170 @@ export class SettingsService {
       };
     }
   }
+
+  private readonly githubMasked = '********';
+
+  /**
+   * Retrieves the GitHub settings.
+   * @param decrypted If true, returns decrypted secrets. Otherwise, returns masked placeholders.
+   */
+  async getGitHubSettings(decrypted = false) {
+    let settings = await this.prisma.gitHubSettings.findFirst();
+
+    if (!settings) {
+      return {
+        appId: '',
+        privateKey: '',
+        webhookSecret: '',
+        clientId: '',
+        clientSecret: '',
+      };
+    }
+
+    const response: any = { ...settings };
+
+    if (settings.privateKey) {
+      response.privateKey = decrypted ? decrypt(settings.privateKey, this.encryptionKey) : this.githubMasked;
+    } else {
+      response.privateKey = '';
+    }
+
+    if (settings.webhookSecret) {
+      response.webhookSecret = decrypted ? decrypt(settings.webhookSecret, this.encryptionKey) : this.githubMasked;
+    } else {
+      response.webhookSecret = '';
+    }
+
+    if (settings.clientSecret) {
+      response.clientSecret = decrypted ? decrypt(settings.clientSecret, this.encryptionKey) : this.githubMasked;
+    } else {
+      response.clientSecret = '';
+    }
+
+    return response;
+  }
+
+  /**
+   * Updates or inserts GitHub settings.
+   */
+  async updateGitHubSettings(data: {
+    appId?: string;
+    privateKey?: string;
+    webhookSecret?: string;
+    clientId?: string;
+    clientSecret?: string;
+  }) {
+    const existing = await this.prisma.gitHubSettings.findFirst();
+    const updateData: any = { ...data };
+
+    // Encrypt sensitive secrets if they have changed and are not masked placeholders
+    if (data.privateKey !== undefined) {
+      if (data.privateKey === this.githubMasked) {
+        updateData.privateKey = existing ? existing.privateKey : null;
+      } else if (data.privateKey.trim() === '') {
+        updateData.privateKey = null;
+      } else {
+        updateData.privateKey = encrypt(data.privateKey.trim(), this.encryptionKey);
+      }
+    }
+
+    if (data.webhookSecret !== undefined) {
+      if (data.webhookSecret === this.githubMasked) {
+        updateData.webhookSecret = existing ? existing.webhookSecret : null;
+      } else if (data.webhookSecret.trim() === '') {
+        updateData.webhookSecret = null;
+      } else {
+        updateData.webhookSecret = encrypt(data.webhookSecret.trim(), this.encryptionKey);
+      }
+    }
+
+    if (data.clientSecret !== undefined) {
+      if (data.clientSecret === this.githubMasked) {
+        updateData.clientSecret = existing ? existing.clientSecret : null;
+      } else if (data.clientSecret.trim() === '') {
+        updateData.clientSecret = null;
+      } else {
+        updateData.clientSecret = encrypt(data.clientSecret.trim(), this.encryptionKey);
+      }
+    }
+
+    let result;
+    if (existing) {
+      result = await this.prisma.gitHubSettings.update({
+        where: { id: existing.id },
+        data: updateData,
+      });
+    } else {
+      result = await this.prisma.gitHubSettings.create({
+        data: updateData,
+      });
+    }
+
+    // Mask output before returning
+    const response: any = { ...result };
+    if (result.privateKey) response.privateKey = this.githubMasked;
+    if (result.webhookSecret) response.webhookSecret = this.githubMasked;
+    if (result.clientSecret) response.clientSecret = this.githubMasked;
+
+    return response;
+  }
+
+  /**
+   * Tests connection with GitHub using the provided App ID and Private Key (or loaded from DB).
+   */
+  async testGitHubConnection(appId?: string, privateKey?: string): Promise<{ success: boolean; message: string }> {
+    let testAppId = appId;
+    let testPrivateKey = privateKey;
+
+    // Load from DB if masked or empty
+    if (!testAppId || !testPrivateKey || testPrivateKey === this.githubMasked) {
+      const saved = await this.getGitHubSettings(true);
+      if (!testAppId) testAppId = saved.appId || undefined;
+      if (!testPrivateKey || testPrivateKey === this.githubMasked) testPrivateKey = saved.privateKey || undefined;
+    }
+
+    if (!testAppId || !testPrivateKey || testAppId.trim() === '' || testPrivateKey.trim() === '') {
+      throw new BadRequestException('GitHub App ID and Private Key are required to test connection');
+    }
+
+    try {
+      // Support base64 encoded private keys (common in production env vars)
+      let cleanedKey = testPrivateKey;
+      if (!cleanedKey.includes('-----BEGIN')) {
+        try {
+          cleanedKey = Buffer.from(cleanedKey, 'base64').toString('utf8');
+        } catch (err) {}
+      }
+      cleanedKey = cleanedKey.replace(/\\n/g, '\n');
+
+      const { Octokit } = await import('@octokit/rest');
+      const { createAppAuth } = await import('@octokit/auth-app');
+
+      // Create a test Octokit client using App Authentication
+      const octokit = new Octokit({
+        authStrategy: createAppAuth,
+        auth: {
+          appId: parseInt(testAppId, 10),
+          privateKey: cleanedKey,
+        },
+      });
+
+      // Handshake with GitHub App endpoint
+      const { data } = await octokit.rest.apps.getAuthenticated();
+      
+      const appName = data?.name || 'MergeMind';
+      const ownerName = (data?.owner as any)?.login || 'Unknown';
+
+      return {
+        success: true,
+        message: `Success! Handshake completed. MergeMind App authenticated with GitHub. (App Name: "${appName}", Owner: "${ownerName}")`,
+      };
+    } catch (error) {
+      this.logger.error(`GitHub App connection test failed: ${error.message}`);
+      return {
+        success: false,
+        message: `Authentication failed: GitHub rejected the Private Key signature. Error: ${error.message}`,
+      };
+    }
+  }
 }
