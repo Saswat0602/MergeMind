@@ -28,8 +28,22 @@ export interface AiReviewResult {
 }
 
 export interface WebhookPayload {
-  action: string;
-  pull_request: {
+  action?: string;
+  installation?: {
+    id: number;
+  };
+  ref?: string;
+  before?: string;
+  after?: string;
+  commits?: Array<{
+    id: string;
+    message: string;
+    author: {
+      name: string;
+      username: string;
+    };
+  }>;
+  pull_request?: {
     id: number;
     number: number;
     title: string;
