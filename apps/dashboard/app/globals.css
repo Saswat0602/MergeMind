@@ -209,7 +209,28 @@ body {
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 30;
+}
+
+/* ─── Settings Forms ─────────────────────────────────────────── */
+.settings-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.settings-form-grid-gh {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.form-inner-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
 }
 
 /* ─── Badges ─────────────────────────────────────────────────── */
@@ -401,7 +422,8 @@ body {
   .pr-card-list { display: flex; flex-direction: column; gap: 10px; }
 
   /* Settings forms 2-col → single col */
-  .settings-form-grid { grid-template-columns: 1fr !important; }
+  .settings-form-grid, .settings-form-grid-gh { grid-template-columns: 1fr !important; }
+  .form-inner-grid { grid-template-columns: 1fr !important; }
 
   /* Review page 2-col → stacked on mobile */
   .review-grid { grid-template-columns: 1fr !important; }
@@ -446,7 +468,8 @@ body {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
   z-index: 39;
 }
 .sidebar-overlay.active { display: block; }

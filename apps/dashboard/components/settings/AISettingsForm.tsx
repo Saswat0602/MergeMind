@@ -131,12 +131,7 @@ export function AISettingsForm({
   ];
 
   return (
-    <form onSubmit={handleSave} className="settings-form-grid" style={{
-      display: 'grid',
-      gridTemplateColumns: '1fr 320px',
-      gap: 20,
-      alignItems: 'flex-start',
-    }}>
+    <form onSubmit={handleSave} className="settings-form-grid">
       {/* Left column */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
@@ -183,7 +178,7 @@ export function AISettingsForm({
 
         {/* Models */}
         <SectionCard title="Model Selection" description="Primary model is used for all reviews. Fallback activates when primary is unavailable.">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div className="form-inner-grid">
             <FieldGroup label="Primary Model">
               <Select value={primaryModel} onValueChange={setPrimaryModel}>
                 <SelectTrigger>{availableModels.find(m => m.id === primaryModel)?.name || 'Select model'}</SelectTrigger>

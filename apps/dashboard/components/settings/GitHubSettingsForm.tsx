@@ -104,12 +104,7 @@ export function GitHubSettingsForm({
   handleTestGitHubConnection, handleSaveGitHub,
 }: GitHubSettingsFormProps) {
   return (
-    <form onSubmit={handleSaveGitHub} className="settings-form-grid" style={{
-      display: 'grid',
-      gridTemplateColumns: '1fr 280px',
-      gap: 20,
-      alignItems: 'flex-start',
-    }}>
+    <form onSubmit={handleSaveGitHub} className="settings-form-grid-gh">
       {/* Left column */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
@@ -118,7 +113,7 @@ export function GitHubSettingsForm({
           title="GitHub App Credentials"
           description="Details from your registered GitHub App. Sensitive values are encrypted before storage."
         >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div className="form-inner-grid">
             <FieldGroup label="App ID">
               <input
                 type="text" value={gitHubAppId}
