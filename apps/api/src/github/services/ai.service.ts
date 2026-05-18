@@ -98,7 +98,7 @@ For each issue, specify:
 - "content": Clear description of why this is an issue and how to fix it.
 - "severity": "HIGH", "MEDIUM", or "LOW".
 - "type": "SECURITY", "PERFORMANCE", or "STYLE".
-- "suggestion": (Optional) Direct drop-in code fix block for this line.${rulesPrompt}${jsonFormatInstructions}`;
+- "suggestion": (Optional) A strict, direct drop-in code replacement snippet for this line. This MUST be valid, executable, and syntactically correct code only matching the file type (no explanation text, markdown, or chat noise). If you cannot supply a direct drop-in valid code patch, omit this field or set it to null. All explanations must be placed strictly in the "content" field.${rulesPrompt}${jsonFormatInstructions}`;
 
     if (dbSettings) {
       if (dbSettings.openRouterKey) {

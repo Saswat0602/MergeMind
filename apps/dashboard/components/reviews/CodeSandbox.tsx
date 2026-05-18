@@ -193,9 +193,9 @@ export function CodeSandbox({
             ) : (
               <button
                 onClick={() => onApplyCommit(comment.id, comment.filePath, comment.lineNumber)}
-                disabled={applyingFixId === comment.id || !!syntaxError}
+                disabled={applyingFixId === comment.id}
                 className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-black transition-all border ${
-                  applyingFixId === comment.id || !!syntaxError
+                  applyingFixId === comment.id
                     ? 'bg-indigo-600/20 text-indigo-400/40 border-indigo-500/10 cursor-not-allowed shadow-none'
                     : 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-500/40 hover:border-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:shadow-[0_0_20px_rgba(99,102,241,0.5)] cursor-pointer'
                 }`}

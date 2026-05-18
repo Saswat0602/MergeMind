@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Body, Param, Query, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '@mergemind/database';
 import { GithubService } from '../services/github.service';
 
 @Controller('dashboard')
 export class ReviewsController {
+  private readonly logger = new Logger(ReviewsController.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly githubService: GithubService,
@@ -250,7 +252,7 @@ export class ReviewsController {
       throw new BadRequestException('Missing required fields for applying suggested commit patch');
     }
 
-    // Syntax validation check for sandbox code edits
+    // Syntax validation warning check for sandbox code edits (non-blocking)
     const fileExtension = body.filePath.split('.').pop()?.toLowerCase();
     if (['js', 'ts', 'jsx', 'tsx'].includes(fileExtension || '')) {
       try {
@@ -267,12 +269,10 @@ export class ReviewsController {
           const message = typeof firstError.messageText === 'string' 
             ? firstError.messageText 
             : firstError.messageText.messageText || 'Unknown syntax error';
-          throw new BadRequestException(`Syntax validation failed for code suggestion: ${message}`);
+          this.logger.warn(`Sandbox compilation warning for ${body.filePath}: ${message}`);
         }
       } catch (err) {
-        if (err instanceof BadRequestException) {
-          throw err;
-        }
+        this.logger.warn(`Failed to parse syntax for ${body.filePath}: ${err.message}`);
       }
     } else if (fileExtension === 'json') {
       try {
