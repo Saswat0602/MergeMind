@@ -106,3 +106,23 @@ export interface UsageSummary {
   averageLatencyMs: number;
   totalRequests: number;
 }
+
+export interface Repository {
+  id: string;
+  name: string;
+  fullName: string;
+  owner: string;
+  isActive: boolean;
+}
+
+export interface RepositoryRule {
+  id: string;
+  repositoryId: string;
+  name: string;
+  description: string | null;
+  pattern: string | null;
+  type: string;
+  isEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}

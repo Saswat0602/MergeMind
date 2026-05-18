@@ -290,4 +290,63 @@ export class GithubService {
       throw new Error(`GitHub branch commit rejected: ${commitError.message}`);
     }
   }
+
+  async syncInstallationRepositories(): Promise<void> {
+    try {
+      const installations = await this.prisma.gitHubInstallation.findMany();
+      this.logger.log(`Syncing repositories for ${installations.length} installations...`);
+
+      for (const inst of installations) {
+        try {
+          const octokit = await this.getAppOctokit(inst.githubId);
+          // Fetch accessible repositories from GitHub
+          const response = await octokit.rest.apps.listReposAccessibleToInstallation({
+            per_page: 100,
+          });
+
+          const repos = response.data.repositories || [];
+          this.logger.log(`Found ${repos.length} accessible repos on GitHub for installation ${inst.githubId}`);
+
+          for (const ghRepo of repos) {
+            // Find or create Organization for the repository owner
+            let org = await this.prisma.organization.findFirst({
+              where: { githubId: ghRepo.owner.id },
+            });
+
+            if (!org) {
+              org = await this.prisma.organization.create({
+                data: {
+                  name: ghRepo.owner.login,
+                  githubId: ghRepo.owner.id,
+                  installationId: inst.githubId,
+                },
+              });
+            }
+
+            // Upsert Repository into the database
+            await this.prisma.repository.upsert({
+              where: { githubId: ghRepo.id },
+              update: {
+                name: ghRepo.name,
+                fullName: ghRepo.full_name,
+                isActive: true,
+              },
+              create: {
+                name: ghRepo.name,
+                fullName: ghRepo.full_name,
+                githubId: ghRepo.id,
+                organizationId: org.id,
+                defaultBranch: ghRepo.default_branch || 'main',
+                isActive: true,
+              },
+            });
+          }
+        } catch (instError) {
+          this.logger.error(`Failed to sync repos for installation ${inst.githubId}: ${instError.message}`);
+        }
+      }
+    } catch (err) {
+      this.logger.error(`Error in syncInstallationRepositories: ${err.message}`);
+    }
+  }
 }

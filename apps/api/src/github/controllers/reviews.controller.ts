@@ -250,4 +250,119 @@ export class ReviewsController {
       throw new BadRequestException(`Failed to apply suggested commit patch: ${err.message}`);
     }
   }
+
+  @Get('repositories')
+  async getRepositories() {
+    await this.githubService.syncInstallationRepositories();
+    return this.prisma.repository.findMany({
+      where: { isActive: true },
+      orderBy: { fullName: 'asc' },
+    });
+  }
+
+  @Get('repositories/:repoId/rules')
+  async getRules(@Param('repoId') repoId: string) {
+    let rules = await this.prisma.repositoryRule.findMany({
+      where: { repositoryId: repoId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Dynamic default rules fallback: if no rules are configured in the DB yet,
+    // dynamically create and seed the 4 standard default rules!
+    if (rules.length === 0) {
+      const defaults = [
+        {
+          name: 'Strict Type Safety',
+          description: 'Audit TypeScript files to strictly prohibit raw "any" types or uncasted object references.',
+          pattern: 'any',
+          type: 'AI',
+          isEnabled: true,
+        },
+        {
+          name: 'Security Shield',
+          description: 'Prohibit hardcoded API credentials, private key files, database passwords, or auth tokens.',
+          pattern: 'sk-|key-|token-|password',
+          type: 'AI',
+          isEnabled: true,
+        },
+        {
+          name: 'Async Error Boundaries',
+          description: 'Ensure all asynchronous API operations, database queries, and async methods are enclosed in robust try-catch blocks.',
+          pattern: 'async',
+          type: 'AI',
+          isEnabled: true,
+        },
+        {
+          name: 'No Debug Logs in Production',
+          description: 'Avoid checkins of console.logs or temporary debug tracers in primary controller, router, or database files.',
+          pattern: 'console.log',
+          type: 'AI',
+          isEnabled: false,
+        },
+      ];
+
+      const createdRules: any[] = [];
+      for (const rule of defaults) {
+        const newRule = await this.prisma.repositoryRule.create({
+          data: {
+            repositoryId: repoId,
+            ...rule,
+          },
+        });
+        createdRules.push(newRule);
+      }
+      rules = createdRules;
+    }
+
+    return rules;
+  }
+
+  @Post('repositories/:repoId/rules')
+  async createRule(
+    @Param('repoId') repoId: string,
+    @Body()
+    body: {
+      name: string;
+      description: string;
+      pattern?: string;
+      type?: string;
+      isEnabled?: boolean;
+    },
+  ) {
+    return this.prisma.repositoryRule.create({
+      data: {
+        repositoryId: repoId,
+        name: body.name,
+        description: body.description,
+        pattern: body.pattern || '',
+        type: body.type || 'AI',
+        isEnabled: body.isEnabled ?? true,
+      },
+    });
+  }
+
+  @Post('rules/:id')
+  async updateRule(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      name?: string;
+      description?: string;
+      pattern?: string;
+      type?: string;
+      isEnabled?: boolean;
+    },
+  ) {
+    return this.prisma.repositoryRule.update({
+      where: { id },
+      data: body,
+    });
+  }
+
+  @Post('rules/:id/delete')
+  async deleteRule(@Param('id') id: string) {
+    return this.prisma.repositoryRule.delete({
+      where: { id },
+    });
+  }
 }
