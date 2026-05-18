@@ -3,6 +3,7 @@
 import { useDashboardData } from '../hooks/useDashboardData';
 import { DashboardHeader } from '../components/dashboard/DashboardHeader';
 import { KpiCards } from '../components/dashboard/KpiCards';
+import { DashboardCharts } from '../components/dashboard/DashboardCharts';
 import { FiltersBar } from '../components/dashboard/FiltersBar';
 import { PRTable } from '../components/dashboard/PRTable';
 
@@ -45,6 +46,7 @@ export default function DashboardHome() {
     <div className="page-content">
       <DashboardHeader refreshing={refreshing} onRefresh={handleRefresh} />
       <KpiCards stats={stats} />
+      <DashboardCharts stats={stats} />
       <FiltersBar
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}

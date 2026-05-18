@@ -6,6 +6,15 @@ export interface Stats {
   lowSeverityCount: number;
   totalTokens: number;
   totalCost: number;
+  dailyTimeline?: { date: string; tokens: number; cost: number }[];
+}
+
+export interface AnalysisJob {
+  id: string;
+  status: string;
+  step: string | null;
+  error?: string | null;
+  createdAt: string;
 }
 
 export interface PRRecord {
@@ -73,6 +82,7 @@ export interface PRDetails {
     name: string;
   };
   reviews: Review[];
+  jobs?: AnalysisJob[];
 }
 
 export interface AIModel {

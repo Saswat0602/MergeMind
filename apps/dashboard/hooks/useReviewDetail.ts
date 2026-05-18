@@ -38,6 +38,21 @@ export function useReviewDetail(id: string) {
     }
   }, [id]);
 
+  // Real-time job status polling
+  useEffect(() => {
+    if (!pr || !pr.jobs || pr.jobs.length === 0) return;
+    
+    const latestJob = pr.jobs[0];
+    const isRunning = latestJob.status === 'PENDING' || latestJob.status === 'PROCESSING';
+    
+    if (isRunning) {
+      const interval = setInterval(() => {
+        fetchPRDetails();
+      }, 1500);
+      return () => clearInterval(interval);
+    }
+  }, [pr, id]);
+
   // Sync suggestion changes
   useEffect(() => {
     if (pr?.reviews[0]?.comments) {

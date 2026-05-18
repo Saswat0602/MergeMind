@@ -82,6 +82,139 @@ export default function ReviewPage({ params }: ReviewPageProps) {
     );
   }
 
+  /* ── Real-Time Stepper Progress ──────────────────────────── */
+  const latestJob = pr.jobs?.[0];
+  const isJobRunning = latestJob && (latestJob.status === 'PENDING' || latestJob.status === 'PROCESSING');
+
+  if (isJobRunning) {
+    const activeStep = latestJob.step || 'FETCHING_DIFF';
+    
+    const steps = [
+      { id: 'FETCHING_DIFF', label: 'Fetching Diff', desc: 'Retrieving commit details and git diff stream from GitHub App installation' },
+      { id: 'AI_ANALYSIS', label: 'AI Review Audit', desc: 'Analyzing files against enabled Repository Rules using DeepSeek Reasoning models' },
+      { id: 'POSTING', label: 'Publishing Findings', desc: 'Compiling code recommendations, hotfixes, and comments back to database and GitHub Pull Request' },
+    ];
+
+    const getStepIndex = (stepId: string) => {
+      if (stepId === 'COMPLETED') return 3;
+      return steps.findIndex(s => s.id === stepId);
+    };
+
+    const currentIdx = getStepIndex(activeStep);
+
+    return (
+      <div className="page-content" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <PageHeader
+          backLabel="Dashboard"
+          backHref="/"
+          breadcrumbTag={`PR #${pr.number}`}
+          title={pr.title}
+          subtitle={`@${pr.authorHandle}`}
+        />
+        
+        <div className="card" style={{
+          padding: '48px 40px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 36,
+          background: 'linear-gradient(135deg, var(--bg-surface) 0%, rgba(22,25,32,0.8) 100%)',
+          border: '1px solid var(--border-soft)',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.3)',
+          borderRadius: 12,
+          maxWidth: 720,
+          margin: '30px auto',
+          width: '100%',
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div className="spinner" style={{ width: 40, height: 40, margin: '0 auto 16px', borderTopColor: 'var(--accent)' }} />
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: 'var(--text-primary)', fontFamily: 'sans-serif' }}>
+              AI Code Review Audit in Progress
+            </h2>
+            <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>
+              MergeMind is auditing your changes against active regulatory rules.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, width: '100%', maxWidth: 500, margin: '10px 0' }}>
+            {steps.map((step, idx) => {
+              const isCompleted = idx < currentIdx;
+              const isActive = idx === currentIdx;
+              const isPending = idx > currentIdx;
+
+              let iconColor = 'var(--text-muted)';
+              let borderColor = 'var(--border-soft)';
+              let bg = 'var(--bg-elevated)';
+              let pulseClass = '';
+
+              if (isCompleted) {
+                iconColor = 'var(--success)';
+                borderColor = 'var(--success)';
+                bg = 'rgba(16,185,129,0.1)';
+              } else if (isActive) {
+                iconColor = 'var(--accent)';
+                borderColor = 'var(--accent)';
+                bg = 'var(--accent-dim)';
+                pulseClass = 'animate-pulse';
+              }
+
+              return (
+                <div key={step.id} style={{ display: 'flex', gap: 18, position: 'relative' }}>
+                  {idx < steps.length - 1 && (
+                    <div style={{
+                      position: 'absolute',
+                      left: 17,
+                      top: 36,
+                      bottom: -22,
+                      width: 2,
+                      background: isCompleted ? 'var(--success)' : 'var(--border-soft)',
+                      opacity: 0.8,
+                      zIndex: 1,
+                    }} />
+                  )}
+
+                  <div className={pulseClass} style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: '50%',
+                    border: `2px solid ${borderColor}`,
+                    background: bg,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: iconColor,
+                    fontWeight: 700,
+                    fontSize: 12,
+                    zIndex: 2,
+                    boxShadow: isActive ? '0 0 15px rgba(99,102,241,0.4)' : 'none',
+                    transition: 'all 0.3s ease',
+                  }}>
+                    {isCompleted ? '✓' : idx + 1}
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'center' }}>
+                    <span style={{
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: isActive ? 'var(--text-primary)' : isCompleted ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      transition: 'all 0.3s ease',
+                    }}>
+                      {step.label}
+                      {isActive && <span style={{ fontSize: 9.5, fontWeight: 900, background: 'var(--accent-dim)', color: '#818cf8', borderRadius: 4, padding: '1px 5px', marginLeft: 8, textTransform: 'uppercase' }}>Active</span>}
+                    </span>
+                    <span style={{ fontSize: 11, color: isPending ? 'var(--text-muted)' : 'var(--text-secondary)', marginTop: 2, lineHeight: 1.5 }}>
+                      {step.desc}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   /* ── Helpers ─────────────────────────────────────────────── */
   const cat  = (type: string)     => CATEGORY_MAP[type] ?? { cls: 'badge-neutral', label: type };
   const sev  = (severity: string) => SEVERITY_MAP[severity] ?? 'badge-neutral';

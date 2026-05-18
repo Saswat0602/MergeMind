@@ -36,6 +36,49 @@ export class ReviewsController {
       },
     });
 
+    // Past 7 days daily metrics
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const dailyUsage = await this.prisma.aiUsageLog.findMany({
+      where: {
+        createdAt: {
+          gte: sevenDaysAgo,
+        },
+      },
+      select: {
+        createdAt: true,
+        totalTokens: true,
+        cost: true,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    // Group by date string (YYYY-MM-DD)
+    const dailyMap: { [date: string]: { tokens: number; cost: number } } = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      dailyMap[dateStr] = { tokens: 0, cost: 0.0 };
+    }
+
+    for (const log of dailyUsage) {
+      const dateStr = log.createdAt.toISOString().split('T')[0];
+      if (dailyMap[dateStr]) {
+        dailyMap[dateStr].tokens += log.totalTokens;
+        dailyMap[dateStr].cost += log.cost || 0.0;
+      }
+    }
+
+    const dailyTimeline = Object.entries(dailyMap).map(([date, data]) => ({
+      date,
+      tokens: data.tokens,
+      cost: parseFloat(data.cost.toFixed(4)),
+    }));
+
     return {
       totalPrs,
       activeRepositories,
@@ -44,6 +87,7 @@ export class ReviewsController {
       lowSeverityCount,
       totalTokens: usage._sum.totalTokens || 0,
       totalCost: usage._sum.cost || 0.0,
+      dailyTimeline,
     };
   }
 
@@ -262,8 +306,22 @@ export class ReviewsController {
 
   @Get('repositories/:repoId/rules')
   async getRules(@Param('repoId') repoId: string) {
+    const repository = await this.prisma.repository.findFirst({
+      where: {
+        OR: [
+          { id: repoId },
+          { fullName: repoId },
+          { name: repoId },
+        ],
+      },
+    });
+
+    if (!repository) {
+      throw new NotFoundException(`Repository not found for: ${repoId}`);
+    }
+
     let rules = await this.prisma.repositoryRule.findMany({
-      where: { repositoryId: repoId },
+      where: { repositoryId: repository.id },
       orderBy: { createdAt: 'asc' },
     });
 
@@ -305,7 +363,7 @@ export class ReviewsController {
       for (const rule of defaults) {
         const newRule = await this.prisma.repositoryRule.create({
           data: {
-            repositoryId: repoId,
+            repositoryId: repository.id,
             ...rule,
           },
         });
@@ -329,9 +387,23 @@ export class ReviewsController {
       isEnabled?: boolean;
     },
   ) {
+    const repository = await this.prisma.repository.findFirst({
+      where: {
+        OR: [
+          { id: repoId },
+          { fullName: repoId },
+          { name: repoId },
+        ],
+      },
+    });
+
+    if (!repository) {
+      throw new NotFoundException(`Repository not found for: ${repoId}`);
+    }
+
     return this.prisma.repositoryRule.create({
       data: {
-        repositoryId: repoId,
+        repositoryId: repository.id,
         name: body.name,
         description: body.description,
         pattern: body.pattern || '',
@@ -364,5 +436,22 @@ export class ReviewsController {
     return this.prisma.repositoryRule.delete({
       where: { id },
     });
+  }
+
+  @Get('jobs/:id/status')
+  async getJobStatus(@Param('id') id: string) {
+    const job = await this.prisma.analysisJob.findUnique({
+      where: { id },
+    });
+    if (!job) {
+      throw new NotFoundException(`Analysis job with ID ${id} not found`);
+    }
+    return {
+      id: job.id,
+      status: job.status,
+      step: job.step,
+      error: job.error,
+      pullRequestId: job.pullRequestId,
+    };
   }
 }
