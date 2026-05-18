@@ -155,7 +155,7 @@ export default function ReviewPage({ params }: ReviewPageProps) {
                 iconColor = 'var(--accent)';
                 borderColor = 'var(--accent)';
                 bg = 'var(--accent-dim)';
-                pulseClass = 'animate-pulse';
+                pulseClass = '';
               }
 
               return (
@@ -186,7 +186,7 @@ export default function ReviewPage({ params }: ReviewPageProps) {
                     fontWeight: 700,
                     fontSize: 12,
                     zIndex: 2,
-                    boxShadow: isActive ? '0 0 15px rgba(99,102,241,0.4)' : 'none',
+                    boxShadow: 'none',
                     transition: 'all 0.3s ease',
                   }}>
                     {isCompleted ? '✓' : idx + 1}

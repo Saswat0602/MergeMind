@@ -46,7 +46,7 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
     };
   };
 
-  // 2. 7-Day Area Chart Calculations
+  // 2. 7-Day spline cost curve Line Chart Calculations
   const defaultTimeline: TimelinePoint[] = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
@@ -73,13 +73,6 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
     return { x, y, date: d.date, cost: d.cost, tokens: d.tokens };
   });
 
-  // SVG Area path string
-  const areaPath = points.length > 0 
-    ? `M ${points[0].x} ${chartHeight - paddingY} ` +
-      points.map(p => `L ${p.x} ${p.y}`).join(' ') +
-      ` L ${points[points.length - 1].x} ${chartHeight - paddingY} Z`
-    : '';
-
   // SVG Line path string
   const linePath = points.length > 0
     ? `M ${points[0].x} ${points[0].y} ` + points.map(p => `L ${p.x} ${p.y}`).join(' ')
@@ -103,7 +96,7 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
       width: '100%',
       marginBottom: 6,
     }}>
-      {/* ── Severity Distribution Concentric Chart ── */}
+      {/* ── Severity Distribution Concentric Chart (Flat Design) ── */}
       <div className="card" style={{
         padding: '24px 28px',
         display: 'flex',
@@ -111,37 +104,10 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
         gap: 16,
         position: 'relative',
         overflow: 'hidden',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-        background: 'linear-gradient(135deg, var(--bg-surface) 0%, rgba(22,25,32,0.7) 100%)',
+        background: 'var(--bg-surface)',
         border: '1px solid var(--border-soft)',
+        boxShadow: 'none',
       }}>
-        {/* Glow Filter */}
-        <svg style={{ position: 'absolute', width: 0, height: 0 }}>
-          <defs>
-            <filter id="glow-green" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="4" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-            <filter id="glow-orange" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="4" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-            <filter id="glow-red" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="4" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-        </svg>
-
         <div>
           <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
             Security Audit Standards
@@ -156,11 +122,11 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
           <div style={{ width: 170, height: 170, position: 'relative', flexShrink: 0 }}>
             <svg width="170" height="170" viewBox="0 0 200 200" style={{ transform: 'rotate(-90deg)' }}>
               {/* Concentric Backing Circles */}
-              <circle cx="100" cy="100" r={outerRadius} fill="none" stroke="rgba(16, 185, 129, 0.05)" strokeWidth="10" />
-              <circle cx="100" cy="100" r={middleRadius} fill="none" stroke="rgba(245, 158, 11, 0.05)" strokeWidth="10" />
-              <circle cx="100" cy="100" r={innerRadius} fill="none" stroke="rgba(239, 68, 68, 0.05)" strokeWidth="10" />
+              <circle cx="100" cy="100" r={outerRadius} fill="none" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="10" />
+              <circle cx="100" cy="100" r={middleRadius} fill="none" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="10" />
+              <circle cx="100" cy="100" r={innerRadius} fill="none" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="10" />
 
-              {/* Glowing Segments */}
+              {/* Flat Clean Segments (No Glow Filters) */}
               {/* Outer circle: Low (Emerald green) */}
               <circle
                 cx="100"
@@ -171,7 +137,6 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
                 strokeWidth="10"
                 strokeLinecap="round"
                 {...calcDash(outerRadius, low)}
-                filter="url(#glow-green)"
                 style={{ transition: 'stroke-dashoffset 0.8s ease-in-out' }}
               />
 
@@ -185,7 +150,6 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
                 strokeWidth="10"
                 strokeLinecap="round"
                 {...calcDash(middleRadius, medium)}
-                filter="url(#glow-orange)"
                 style={{ transition: 'stroke-dashoffset 0.8s ease-in-out' }}
               />
 
@@ -199,7 +163,6 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
                 strokeWidth="10"
                 strokeLinecap="round"
                 {...calcDash(innerRadius, high)}
-                filter="url(#glow-red)"
                 style={{ transition: 'stroke-dashoffset 0.8s ease-in-out' }}
               />
             </svg>
@@ -221,11 +184,11 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
             </div>
           </div>
 
-          {/* Legends */}
+          {/* Legends (Flat Design) */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minWidth: 100 }}>
             {/* Low Severity */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--success)', boxShadow: '0 0 8px var(--success)' }} />
+              <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--success)' }} />
               <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>Low Severity</span>
                 <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{low} findings</span>
@@ -234,7 +197,7 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
 
             {/* Medium Severity */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--warning)', boxShadow: '0 0 8px var(--warning)' }} />
+              <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--warning)' }} />
               <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>Medium Severity</span>
                 <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{medium} findings</span>
@@ -243,7 +206,7 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
 
             {/* High Severity */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--danger)', boxShadow: '0 0 8px var(--danger)' }} />
+              <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--danger)' }} />
               <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>High Severity</span>
                 <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{high} findings</span>
@@ -253,7 +216,7 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
         </div>
       </div>
 
-      {/* ── 7-Day API Cost Timeline spline area Chart ── */}
+      {/* ── 7-Day API Cost Timeline spline Line Chart (Flat Design) ── */}
       <div className="card" style={{
         padding: '24px 28px',
         display: 'flex',
@@ -261,9 +224,9 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
         gap: 12,
         position: 'relative',
         overflow: 'hidden',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-        background: 'linear-gradient(135deg, var(--bg-surface) 0%, rgba(22,25,32,0.7) 100%)',
+        background: 'var(--bg-surface)',
         border: '1px solid var(--border-soft)',
+        boxShadow: 'none',
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
           <div>
@@ -276,46 +239,29 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
           </div>
           <div style={{
             fontSize: 10,
-            background: 'var(--accent-dim)',
-            color: '#818cf8',
+            background: 'var(--bg-elevated)',
+            color: 'var(--text-primary)',
             borderRadius: 12,
             padding: '3px 9px',
             fontWeight: 700,
-            border: '1px solid rgba(99,102,241,0.2)',
+            border: '1px solid var(--border-soft)',
           }}>
             7 Days Audit Trend
           </div>
         </div>
 
-        {/* Spline Area SVG chart */}
+        {/* Flat SVG Line chart (No linear gradient fills, no glow filters) */}
         <div style={{ position: 'relative', height: 170, width: '100%', marginTop: 8 }}>
           <svg width="100%" height="100%" viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="area-gradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.25" />
-                <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.00" />
-              </linearGradient>
-              <filter id="glow-line" x="-10%" y="-10%" width="120%" height="120%">
-                <feGaussianBlur stdDeviation="3" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-
             {/* Grid Line Baselines */}
             <line x1={paddingX} y1={paddingY} x2={chartWidth - paddingX} y2={paddingY} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
             <line x1={paddingX} y1={(chartHeight) / 2} x2={chartWidth - paddingX} y2={(chartHeight) / 2} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
             <line x1={paddingX} y1={chartHeight - paddingY} x2={chartWidth - paddingX} y2={chartHeight - paddingY} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
 
-            {/* Filled Area under line */}
-            <path d={areaPath} fill="url(#area-gradient)" />
+            {/* Flat Cost Line (No Filter) */}
+            <path d={linePath} fill="none" stroke="var(--accent)" strokeWidth="2.5" />
 
-            {/* Main Spline cost Line */}
-            <path d={linePath} fill="none" stroke="var(--accent)" strokeWidth="3" filter="url(#glow-line)" />
-
-            {/* Anchor glowing interactive Dots */}
+            {/* Flat Dots */}
             {points.map((p, index) => {
               const isHovered = hoveredIdx === index;
               return (
@@ -330,25 +276,14 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
                     onMouseEnter={() => setHoveredIdx(index)}
                     onMouseLeave={() => setHoveredIdx(null)}
                   />
-                  {/* Glow ring */}
+                  {/* Flat core dot */}
                   <circle
                     cx={p.x}
                     cy={p.y}
-                    r={isHovered ? 8 : 4}
-                    fill="var(--accent)"
-                    style={{
-                      transition: 'all 0.15s ease-out',
-                      opacity: isHovered ? 0.4 : 0,
-                    }}
-                  />
-                  {/* Internal anchor core */}
-                  <circle
-                    cx={p.x}
-                    cy={p.y}
-                    r={isHovered ? 4.5 : 3}
-                    fill="#ffffff"
+                    r={isHovered ? 5 : 3.5}
+                    fill={isHovered ? 'var(--accent)' : '#ffffff'}
                     stroke="var(--accent)"
-                    strokeWidth={isHovered ? 2.5 : 1.5}
+                    strokeWidth="1.5"
                     style={{ transition: 'all 0.15s ease-out', cursor: 'pointer' }}
                   />
                   {/* Date labels on horizontal axis */}
@@ -366,19 +301,18 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
             })}
           </svg>
 
-          {/* Floating glassmorphic tooltip */}
+          {/* Floating flat tooltip */}
           {hoveredIdx !== null && (
             <div style={{
               position: 'absolute',
               top: Math.max(points[hoveredIdx].y - 65, 0),
               left: Math.min(Math.max(points[hoveredIdx].x - 65, 10), chartWidth - 140),
-              background: 'rgba(22, 25, 32, 0.85)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(99,102,241,0.3)',
-              borderRadius: 8,
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-soft)',
+              borderRadius: 6,
               padding: '6px 10px',
               pointerEvents: 'none',
-              boxShadow: '0 4px 16px rgba(99,102,241,0.25)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
               display: 'flex',
               flexDirection: 'column',
               gap: 2,
@@ -392,7 +326,7 @@ export function DashboardCharts({ stats }: DashboardChartsProps) {
               <span style={{ fontSize: 12, fontWeight: 900, color: '#ffffff' }}>
                 ${points[hoveredIdx].cost.toFixed(4)}
               </span>
-              <span style={{ fontSize: 8.5, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
+              <span style={{ fontSize: 8.5, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
                 {points[hoveredIdx].tokens.toLocaleString()} tokens
               </span>
             </div>

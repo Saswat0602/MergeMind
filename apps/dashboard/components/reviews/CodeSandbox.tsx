@@ -120,7 +120,7 @@ export function CodeSandbox({
     <div className="flex flex-col gap-3 mt-4">
       <div className="flex justify-between items-center px-1">
         <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-violet-500 animate-pulse"></span>
+          <span className="inline-block w-2.5 h-2.5 rounded-full bg-violet-500"></span>
           Interactive Sandbox Code Editor
         </span>
         <span className="text-[10px] text-slate-500 font-mono">Tweak suggested fix manually</span>
@@ -197,7 +197,7 @@ export function CodeSandbox({
                 className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-black transition-all border ${
                   applyingFixId === comment.id
                     ? 'bg-indigo-600/20 text-indigo-400/40 border-indigo-500/10 cursor-not-allowed shadow-none'
-                    : 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-500/40 hover:border-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:shadow-[0_0_20px_rgba(99,102,241,0.5)] cursor-pointer'
+                    : 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-500/40 hover:border-indigo-400 cursor-pointer'
                 }`}
               >
                 {applyingFixId === comment.id ? (
