@@ -35,6 +35,7 @@ export class AiService {
     prDescription: string,
     diffContent: string,
     actionDescription = 'Pull Request Review Audit',
+    rules?: any[],
   ): Promise<{
     response: AiReviewResponse;
     promptTokens: number;
@@ -73,7 +74,14 @@ You MUST respond strictly in valid JSON format matching the following TypeScript
 Crucial rules:
 1. ONLY comment on lines that were actually added or modified in the diff (marked with +). Never comment on unmodified lines.
 2. If there are no issues, keep the "comments" array empty. Do not invent minor or nitpicky style rules just to fill it.
-3. Ensure the JSON is completely valid and escaped properly.`;
+3. STRICTLY AVOID styling nitpicks, minor naming preferences, formatting feedback (e.g. missing semicolons, whitespaces, brackets, comments, minor code spacing) or minor style nits. ONLY comment on bugs, logic issues, security risks, execution latency, or rule violations.
+4. Ensure the JSON is completely valid and escaped properly.`;
+
+    let rulesPrompt = '';
+    if (rules && rules.length > 0) {
+      rulesPrompt = `\n\nYou MUST strictly validate the code changes against the following custom organizational rules:\n` +
+        rules.map((r, i) => `${i + 1}. [Rule: ${r.name}] Type: ${r.type} - Description: ${r.description || ''}`).join('\n');
+    }
 
     let systemPrompt = `You are a professional, senior software engineer and security auditor.
 Your job is to review a Git Pull Request diff and provide:
@@ -82,7 +90,7 @@ Your job is to review a Git Pull Request diff and provide:
 3. A list of constructive review comments focused on:
    - **SECURITY**: Exposed secrets/keys, SQL injections, lack of input validation, XSS, insecure deserialization, etc.
    - **PERFORMANCE**: N+1 queries, heavy loops, missing indexes, blocking synchronous calls.
-   - **STYLE**: Dead code, massive functions, duplicate logic, very bad naming.
+   - **STYLE**: Violations of custom rules, dead code, massive functions, duplicate logic, very bad naming (avoid minor nitpicks).
 
 For each issue, specify:
 - "filePath": Exact file path.
@@ -90,7 +98,7 @@ For each issue, specify:
 - "content": Clear description of why this is an issue and how to fix it.
 - "severity": "HIGH", "MEDIUM", or "LOW".
 - "type": "SECURITY", "PERFORMANCE", or "STYLE".
-- "suggestion": (Optional) Direct drop-in code fix block for this line.${jsonFormatInstructions}`;
+- "suggestion": (Optional) Direct drop-in code fix block for this line.${rulesPrompt}${jsonFormatInstructions}`;
 
     if (dbSettings) {
       if (dbSettings.openRouterKey) {
@@ -108,7 +116,7 @@ For each issue, specify:
       maxTokens = dbSettings.maxTokens ?? maxTokens;
       
       if (dbSettings.systemPrompt && dbSettings.systemPrompt.trim() !== '') {
-        systemPrompt = `${dbSettings.systemPrompt.trim()}${jsonFormatInstructions}`;
+        systemPrompt = `${dbSettings.systemPrompt.trim()}${rulesPrompt}${jsonFormatInstructions}`;
       }
     }
 

@@ -121,13 +121,22 @@ export class PrReviewProcessor extends WorkerHost {
         data: { step: 'AI_ANALYSIS' },
       });
 
+      // Query enabled repository rules from the database
+      const rules = await this.prisma.repositoryRule.findMany({
+        where: {
+          repositoryId: repositoryId,
+          isEnabled: true,
+        },
+      });
+
       // 4. Run AI Analysis via OpenRouter
       const { response: aiResult, promptTokens, completionTokens, latencyMs, modelUsed, logIds } = 
         await this.aiService.analyzeDiff(
           reviewTitle,
           '',
           diff,
-          isPushEvent ? `Push Commit Audit: "${commitMessage || 'No Message'}"` : `PR #${prNumber} Review Audit`
+          isPushEvent ? `Push Commit Audit: "${commitMessage || 'No Message'}"` : `PR #${prNumber} Review Audit`,
+          rules
         );
 
       // 5. Update job step to POSTING
@@ -137,7 +146,15 @@ export class PrReviewProcessor extends WorkerHost {
       });
 
       // 6. Save ReviewResult and Comments to Database
-      const commentsArray = Array.isArray(aiResult?.comments) ? aiResult.comments : [];
+      let commentsArray = Array.isArray(aiResult?.comments) ? aiResult.comments : [];
+
+      // Direct Push Noise Filtering: Filter out LOW severity and STYLE type comments to prevent notification spam
+      if (isPushEvent) {
+        commentsArray = commentsArray.filter(
+          c => c.severity !== 'LOW' && c.type !== 'STYLE'
+        );
+      }
+
       const severityScoreValue = typeof aiResult?.severityScore === 'number' ? aiResult.severityScore : 0;
       const summaryValue = aiResult?.summary || 'No summary provided by AI.';
 

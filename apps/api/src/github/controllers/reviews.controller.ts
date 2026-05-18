@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@mergemind/database';
 import { GithubService } from '../services/github.service';
 
@@ -203,7 +203,39 @@ export class ReviewsController {
     },
   ) {
     if (!body.pullRequestId || !body.filePath || !body.suggestion || !body.lineNumber) {
-      throw new NotFoundException('Missing required fields for applying suggested commit patch');
+      throw new BadRequestException('Missing required fields for applying suggested commit patch');
+    }
+
+    // Syntax validation check for sandbox code edits
+    const fileExtension = body.filePath.split('.').pop()?.toLowerCase();
+    if (['js', 'ts', 'jsx', 'tsx'].includes(fileExtension || '')) {
+      try {
+        const ts = require('typescript');
+        const sourceFile = ts.createSourceFile(
+          body.filePath,
+          body.suggestion,
+          ts.ScriptTarget.Latest,
+          true
+        );
+        const diagnostics = (sourceFile as any).parseDiagnostics || [];
+        if (diagnostics.length > 0) {
+          const firstError = diagnostics[0];
+          const message = typeof firstError.messageText === 'string' 
+            ? firstError.messageText 
+            : firstError.messageText.messageText || 'Unknown syntax error';
+          throw new BadRequestException(`Syntax validation failed for code suggestion: ${message}`);
+        }
+      } catch (err) {
+        if (err instanceof BadRequestException) {
+          throw err;
+        }
+      }
+    } else if (fileExtension === 'json') {
+      try {
+        JSON.parse(body.suggestion);
+      } catch (jsonErr) {
+        throw new BadRequestException(`JSON syntax validation failed: ${jsonErr.message}`);
+      }
     }
 
     try {
@@ -215,7 +247,7 @@ export class ReviewsController {
       );
       return result;
     } catch (err) {
-      throw new NotFoundException(`Failed to apply suggested commit patch: ${err.message}`);
+      throw new BadRequestException(`Failed to apply suggested commit patch: ${err.message}`);
     }
   }
 }

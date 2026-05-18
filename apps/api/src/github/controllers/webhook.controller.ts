@@ -5,6 +5,7 @@ import {
   Headers,
   UnauthorizedException,
   Logger,
+  Req,
 } from '@nestjs/common';
 import { WebhookService } from '../services/webhook.service';
 import * as SharedTypes from '@mergemind/shared-types';
@@ -27,12 +28,13 @@ export class WebhookController {
 
   @Post()
   async handleWebhook(
+    @Req() req: any,
     @Headers('x-hub-signature-256') signature: string,
     @Headers('x-github-event') githubEvent: string,
     @Headers('x-github-delivery') deliveryId: string,
     @Body() payload: SharedTypes.WebhookPayload,
   ) {
-    await this.verifySignature(payload, signature);
+    await this.verifySignature(req, signature);
 
     if (deliveryId) {
       if (this.processedDeliveries.has(deliveryId)) {
@@ -64,7 +66,7 @@ export class WebhookController {
     return { received: true };
   }
 
-  private async verifySignature(payload: any, signature: string) {
+  private async verifySignature(req: any, signature: string) {
     let secret: string | undefined;
 
     try {
@@ -91,9 +93,9 @@ export class WebhookController {
     // Clean surrounding quotes if present from env file
     secret = secret.replace(/^["']|["']$/g, '');
 
+    const rawBody = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body);
     const hmac = crypto.createHmac('sha256', secret);
-    const digest =
-      'sha256=' + hmac.update(JSON.stringify(payload)).digest('hex');
+    const digest = 'sha256=' + hmac.update(rawBody).digest('hex');
 
     if (signature !== digest) {
       this.logger.warn(

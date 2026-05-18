@@ -7,7 +7,9 @@ import * as path from 'path';
 dotenv.config({ path: path.join(__dirname, '../../../.env') });
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, new ExpressAdapter());
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(), {
+    rawBody: true,
+  });
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
