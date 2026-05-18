@@ -243,6 +243,7 @@ export class ReviewsController {
     @Body()
     body: {
       pullRequestId: string;
+      commentId?: string;
       filePath: string;
       suggestion: string;
       lineNumber: number;
@@ -271,33 +272,13 @@ export class ReviewsController {
             : firstError.messageText.messageText || 'Unknown syntax error';
           this.logger.warn(`Sandbox compilation warning for ${body.filePath}: ${message}`);
         }
-      } catch (err) {
+      } catch (err: any) {
         this.logger.warn(`Failed to parse syntax for ${body.filePath}: ${err.message}`);
       }
     } else if (fileExtension === 'json') {
-const fileExtension = body.filePath.split('.').pop()?.toLowerCase() || '';
-if (['js', 'ts', 'jsx', 'tsx'].includes(fileExtension)) {
-  try {
-    const result = await this.sandboxService.checkSyntax(body.filePath, body.code);
-    const errors = result?.errors || [];
-    if (errors.length > 0) {
-      const firstError = errors[0];
-      const message = typeof firstError.messageText === 'string' 
-        ? firstError.messageText 
-        : firstError.messageText?.messageText || 'Unknown syntax error';
-      this.logger.warn(`Sandbox compilation warning for ${body.filePath}: ${message}`);
-    }
-  } catch (err: any) {
-    // Do not swallow unexpected errors; rethrow non-syntax exceptions
-    if (err instanceof SyntaxError) {
-      this.logger.warn(`Failed to parse syntax for ${body.filePath}: ${err.message}`);
-    } else {
-      throw err;
-    }
-  }
-}
+      try {
         JSON.parse(body.suggestion);
-      } catch (jsonErr) {
+      } catch (jsonErr: any) {
         throw new BadRequestException(`JSON syntax validation failed: ${jsonErr.message}`);
       }
     }
@@ -309,8 +290,16 @@ if (['js', 'ts', 'jsx', 'tsx'].includes(fileExtension)) {
         body.suggestion,
         body.lineNumber,
       );
+
+      if (body.commentId) {
+        await this.prisma.reviewComment.update({
+          where: { id: body.commentId },
+          data: { isApplied: true },
+        });
+      }
+
       return result;
-    } catch (err) {
+    } catch (err: any) {
       throw new BadRequestException(`Failed to apply suggested commit patch: ${err.message}`);
     }
   }

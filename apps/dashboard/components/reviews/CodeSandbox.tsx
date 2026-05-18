@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import Editor from '@monaco-editor/react';
 import { ReviewComment } from '../../types';
 
 function checkSyntax(code: string, filePath: string): string | null {
@@ -90,6 +91,14 @@ function checkSyntax(code: string, filePath: string): string | null {
   return null;
 }
 
+function getEditorLanguage(filePath: string): string {
+  const ext = filePath.split('.').pop()?.toLowerCase();
+  if (ext === 'json') return 'json';
+  if (ext === 'js' || ext === 'jsx') return 'javascript';
+  if (ext === 'ts' || ext === 'tsx') return 'typescript';
+  return 'plaintext';
+}
+
 interface CodeSandboxProps {
   comment: ReviewComment;
   editedSuggestions: Record<string, string>;
@@ -111,10 +120,29 @@ export function CodeSandbox({
   branchName,
   onApplyCommit,
 }: CodeSandboxProps) {
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
   if (!comment.suggestion) return null;
 
   const currentCode = editedSuggestions[comment.id] || '';
   const syntaxError = checkSyntax(currentCode, comment.filePath);
+  const isPushed = comment.isApplied || applySuccessId === comment.id;
+
+  const handleEditorDidMount = (editor: any, monaco: any) => {
+    monaco.editor.defineTheme('mergeMindDark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [],
+      colors: {
+        'editor.background': '#090b14',
+        'editorGutter.background': '#090b14',
+        'editor.lineHighlightBackground': '#111527',
+        'editorLineNumber.foreground': '#475569',
+        'editorLineNumber.activeForeground': '#818cf8',
+      }
+    });
+    monaco.editor.setTheme('mergeMindDark');
+  };
 
   return (
     <div className="flex flex-col gap-3 mt-4">
@@ -135,7 +163,7 @@ export function CodeSandbox({
               <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></span>
             </span>
-            <span className="border-l border-white/10 pl-2.5 ml-1 text-slate-500">sandbox.tsx</span>
+            <span className="border-l border-white/10 pl-2.5 ml-1 text-slate-500">{comment.filePath.split('/').pop()}</span>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -153,24 +181,31 @@ export function CodeSandbox({
           </div>
         </div>
 
-        {/* Code Editor Body */}
-        <div className="flex min-h-[120px] max-h-[350px] overflow-y-auto">
-          {/* Line Numbers */}
-          <div className="select-none bg-[#0a0d16] text-[#334155] text-right px-3.5 py-4 border-r border-white/5 font-mono text-[11px] leading-5 flex flex-col">
-            {(currentCode.split('\n')).map((_, index) => (
-              <span key={index}>{index + 1}</span>
-            ))}
-          </div>
-          {/* Editable Text Area */}
-          <textarea
+        {/* Monaco Editor Integration */}
+        <div style={{ height: '360px', width: '100%', position: 'relative', background: '#090b14' }}>
+          <Editor
+            height="100%"
+            width="100%"
+            language={getEditorLanguage(comment.filePath)}
+            theme="mergeMindDark"
+            onMount={handleEditorDidMount}
             value={currentCode}
-            onChange={(e) => {
-              const val = e.target.value;
-              setEditedSuggestions(prev => ({ ...prev, [comment.id]: val }));
+            onChange={(val) => {
+              const updatedCode = val || '';
+              setEditedSuggestions(prev => ({ ...prev, [comment.id]: updatedCode }));
             }}
-            className="flex-1 min-w-0 w-full bg-transparent text-slate-100 font-mono text-[11px] leading-5 p-4 outline-none resize-none border-none focus:ring-0 placeholder-slate-600 min-h-[120px]"
-            style={{ whiteSpace: 'pre', overflowX: 'auto' }}
-            spellCheck="false"
+            options={{
+              fontSize: 12,
+              fontFamily: 'monospace',
+              lineNumbers: 'on',
+              minimap: { enabled: false },
+              scrollbar: { vertical: 'visible', horizontal: 'visible' },
+              tabSize: 2,
+              automaticLayout: true,
+              scrollBeyondLastLine: false,
+              readOnly: isPushed || applyingFixId === comment.id,
+              padding: { top: 12, bottom: 12 },
+            }}
           />
         </div>
 
@@ -183,7 +218,7 @@ export function CodeSandbox({
             <span className="truncate">Will push directly to branch `{branchName || 'main'}`</span>
           </span>
           <div className="flex items-center gap-3 justify-end shrink-0">
-            {applySuccessId === comment.id ? (
+            {isPushed ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
@@ -192,7 +227,7 @@ export function CodeSandbox({
               </span>
             ) : (
               <button
-                onClick={() => onApplyCommit(comment.id, comment.filePath, comment.lineNumber)}
+                onClick={() => setShowConfirmModal(true)}
                 disabled={applyingFixId === comment.id}
                 className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-black transition-all border ${
                   applyingFixId === comment.id
@@ -219,7 +254,7 @@ export function CodeSandbox({
         </div>
 
         {/* Client-side Syntax Checking Banner */}
-        {syntaxError && (
+        {syntaxError && !isPushed && (
           <div className="bg-rose-500/10 px-4 py-2.5 border-t border-rose-500/20 text-[10px] font-semibold text-rose-400 flex items-center gap-2">
             <svg className="w-3.5 h-3.5 shrink-0 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -234,6 +269,112 @@ export function CodeSandbox({
           </div>
         )}
       </div>
+
+      {/* Flat Clean Confirmation Modal */}
+      {showConfirmModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: 16,
+        }}>
+          <div style={{
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-soft)',
+            borderRadius: 8,
+            maxWidth: 420,
+            width: '100%',
+            padding: 24,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          }}>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                background: 'rgba(99,102,241,0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--accent)',
+                flexShrink: 0,
+              }}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>
+                  Confirm Hotfix Push
+                </h3>
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  Are you sure you want to apply this code hotfix? This will directly patch the file on GitHub and commit it to branch <code style={{ color: 'var(--accent)', fontWeight: 'bold' }}>{branchName || 'master'}</code>.
+                </p>
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-soft)',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--bg-elevated)';
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  onApplyCommit(comment.id, comment.filePath, comment.lineNumber);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  background: 'var(--accent)',
+                  border: 'none',
+                  color: '#ffffff',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+              >
+                Confirm & Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

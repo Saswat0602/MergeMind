@@ -86,6 +86,7 @@ export function useReviewDetail(id: string) {
         },
         body: JSON.stringify({
           pullRequestId: pr.id,
+          commentId,
           filePath,
           suggestion: currentSuggestion,
           lineNumber,

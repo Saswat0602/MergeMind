@@ -47,6 +47,7 @@ export interface ReviewComment {
   severity: 'HIGH' | 'MEDIUM' | 'LOW';
   type: 'SECURITY' | 'PERFORMANCE' | 'STYLE';
   suggestion: string | null;
+  isApplied?: boolean;
 }
 
 export interface UsageLog {
