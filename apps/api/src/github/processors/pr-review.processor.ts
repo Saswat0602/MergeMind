@@ -48,7 +48,7 @@ export class PrReviewProcessor extends WorkerHost {
 
     try {
       const [owner, repoName] = repositoryFullname.split('/');
-      let installationId: number;
+      let installationId: bigint | number;
       let repositoryId: string;
       let reviewTitle: string;
 

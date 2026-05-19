@@ -14,7 +14,7 @@ export class GithubService {
     private readonly prisma: PrismaService,
   ) {}
 
-  private async getAppOctokit(installationId: number): Promise<Octokit> {
+  private async getAppOctokit(installationId: bigint | number): Promise<Octokit> {
     let appId: string | undefined;
     let privateKey: string | undefined;
 
@@ -61,13 +61,13 @@ export class GithubService {
       auth: {
         appId: parseInt(appId, 10),
         privateKey: privateKey,
-        installationId: installationId,
+        installationId: Number(installationId),
       },
     });
   }
 
   async getPullRequestDiff(
-    installationId: number,
+    installationId: bigint | number,
     owner: string,
     repo: string,
     pullNumber: number,
@@ -93,7 +93,7 @@ export class GithubService {
   }
 
   async postPullRequestReview(
-    installationId: number,
+    installationId: bigint | number,
     owner: string,
     repo: string,
     pullNumber: number,
@@ -133,7 +133,7 @@ export class GithubService {
   }
 
   async getCompareDiff(
-    installationId: number,
+    installationId: bigint | number,
     owner: string,
     repo: string,
     base: string,
@@ -161,7 +161,7 @@ export class GithubService {
   }
 
   async postCommitComments(
-    installationId: number,
+    installationId: bigint | number,
     owner: string,
     repo: string,
     commitSha: string,

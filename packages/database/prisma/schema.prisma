@@ -12,7 +12,7 @@ datasource db {
 model User {
   id            String         @id @default(uuid())
   email         String         @unique
-  githubId      Int?           @unique
+  githubId      BigInt?        @unique
   login         String?
   name          String?
   avatarUrl     String?
@@ -24,8 +24,8 @@ model User {
 model Organization {
   id               String              @id @default(uuid())
   name             String
-  githubId         Int                 @unique
-  installationId   Int?                @unique
+  githubId         BigInt              @unique
+  installationId   BigInt?             @unique
   avatarUrl        String?
   users            User[]
   repositories     Repository[]
@@ -36,10 +36,10 @@ model Organization {
 
 model GitHubInstallation {
   id            String         @id @default(uuid())
-  githubId      Int            @unique // The installation_id from GitHub
+  githubId      BigInt         @unique // The installation_id from GitHub
   accountName   String
   accountType   String         // Organization or User
-  targetId      Int            // The ID of the org or user on GitHub
+  targetId      BigInt         // The ID of the org or user on GitHub
   organizations Organization[]
   isActive      Boolean        @default(true)
   createdAt     DateTime       @default(now())
@@ -50,7 +50,7 @@ model Repository {
   id             String           @id @default(uuid())
   name           String
   fullName       String           @unique
-  githubId       Int              @unique
+  githubId       BigInt           @unique
   defaultBranch  String           @default("main")
   isPrivate      Boolean          @default(false)
   isActive       Boolean          @default(true)
@@ -67,7 +67,7 @@ model Repository {
 model PullRequest {
   id             String         @id @default(uuid())
   number         Int
-  githubId       Int            @unique
+  githubId       BigInt         @unique
   title          String
   state          String         // open, closed, merged
   authorHandle   String?

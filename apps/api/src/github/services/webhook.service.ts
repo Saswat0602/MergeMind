@@ -22,13 +22,13 @@ export class WebhookService {
     if (payload.installation?.id) {
       installationId = payload.installation.id;
       await this.prisma.gitHubInstallation.upsert({
-        where: { githubId: installationId },
+        where: { githubId: BigInt(installationId) },
         update: { isActive: true },
         create: {
-          githubId: installationId,
+          githubId: BigInt(installationId),
           accountName: repository.owner.login,
           accountType: 'Organization',
-          targetId: repository.owner.id,
+          targetId: BigInt(repository.owner.id),
           isActive: true,
         },
       });
@@ -36,21 +36,21 @@ export class WebhookService {
 
     // 1. Upsert Organization
     const organization = await this.prisma.organization.upsert({
-      where: { githubId: repository.owner.id },
+      where: { githubId: BigInt(repository.owner.id) },
       update: {
         name: repository.owner.login,
-        ...(installationId ? { installationId } : {}),
+        ...(installationId ? { installationId: BigInt(installationId) } : {}),
       },
       create: {
         name: repository.owner.login,
-        githubId: repository.owner.id,
-        ...(installationId ? { installationId } : {}),
+        githubId: BigInt(repository.owner.id),
+        ...(installationId ? { installationId: BigInt(installationId) } : {}),
       },
     });
 
     // 2. Upsert Repository
     const repo = await this.prisma.repository.upsert({
-      where: { githubId: repository.id },
+      where: { githubId: BigInt(repository.id) },
       update: {
         name: repository.name,
         fullName: repository.full_name,
@@ -59,7 +59,7 @@ export class WebhookService {
       create: {
         name: repository.name,
         fullName: repository.full_name,
-        githubId: repository.id,
+        githubId: BigInt(repository.id),
         organizationId: organization.id,
         defaultBranch: pull_request.base.ref,
       },
@@ -82,7 +82,7 @@ export class WebhookService {
       },
       create: {
         number: pull_request.number,
-        githubId: pull_request.id,
+        githubId: BigInt(pull_request.id),
         title: pull_request.title,
         state: 'open',
         authorHandle: pull_request.user.login,
@@ -153,13 +153,13 @@ export class WebhookService {
     if (payload.installation?.id) {
       installationId = payload.installation.id;
       await this.prisma.gitHubInstallation.upsert({
-        where: { githubId: installationId },
+        where: { githubId: BigInt(installationId) },
         update: { isActive: true },
         create: {
-          githubId: installationId,
+          githubId: BigInt(installationId),
           accountName: repository.owner.login,
           accountType: 'Organization',
-          targetId: repository.owner.id,
+          targetId: BigInt(repository.owner.id),
           isActive: true,
         },
       });
@@ -167,22 +167,22 @@ export class WebhookService {
 
     // 1. Upsert Organization
     const organization = await this.prisma.organization.upsert({
-      where: { githubId: repository.owner.id },
+      where: { githubId: BigInt(repository.owner.id) },
       update: {
         name: repository.owner.login,
-        ...(installationId ? { installationId } : {}),
+        ...(installationId ? { installationId: BigInt(installationId) } : {}),
       },
       create: {
         name: repository.owner.login,
-        githubId: repository.owner.id,
-        ...(installationId ? { installationId } : {}),
+        githubId: BigInt(repository.owner.id),
+        ...(installationId ? { installationId: BigInt(installationId) } : {}),
       },
     });
 
     // 2. Upsert Repository
     const branchName = ref ? ref.replace('refs/heads/', '') : 'main';
     const repo = await this.prisma.repository.upsert({
-      where: { githubId: repository.id },
+      where: { githubId: BigInt(repository.id) },
       update: {
         name: repository.name,
         fullName: repository.full_name,
@@ -191,7 +191,7 @@ export class WebhookService {
       create: {
         name: repository.name,
         fullName: repository.full_name,
-        githubId: repository.id,
+        githubId: BigInt(repository.id),
         organizationId: organization.id,
         defaultBranch: branchName,
       },
@@ -218,7 +218,7 @@ export class WebhookService {
       },
       create: {
         number: pseudoNumber,
-        githubId: pseudoNumber, // negative unique ID to avoid conflict with standard GitHub IDs
+        githubId: BigInt(pseudoNumber), // negative unique ID to avoid conflict with standard GitHub IDs
         title: `Branch Push: ${branchName} (${shortSha})`,
         state: 'open',
         authorHandle: latestCommit?.author?.username || repository.owner.login,
