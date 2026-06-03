@@ -25,3 +25,12 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 }
 
 export * from '@prisma/client';
+
+import { Module, Global } from '@nestjs/common';
+
+@Global()
+@Module({
+  providers: [PrismaService],
+  exports: [PrismaService],
+})
+export class DatabaseModule {}

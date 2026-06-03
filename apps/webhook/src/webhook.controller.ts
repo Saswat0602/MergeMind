@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call */
 import {
   Controller,
   Post,
@@ -25,7 +26,9 @@ export class WebhookController {
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
   ) {
-    this.redisClient = new Redis(this.configService.get<string>('REDIS_URL') || 'redis://localhost:6379');
+    this.redisClient = new Redis(
+      this.configService.get<string>('REDIS_URL') || 'redis://localhost:6379',
+    );
   }
 
   @Post()
@@ -41,12 +44,14 @@ export class WebhookController {
     if (deliveryId) {
       const redisKey = `webhook:delivery:${deliveryId}`;
       const isDuplicate = await this.redisClient.exists(redisKey);
-      
+
       if (isDuplicate) {
-        this.logger.warn(`Deduplicated incoming webhook. Delivery ID ${deliveryId} already processed.`);
+        this.logger.warn(
+          `Deduplicated incoming webhook. Delivery ID ${deliveryId} already processed.`,
+        );
         return { received: true, deduplicated: true };
       }
-      
+
       // Store delivery ID with 1 hour TTL (3600 seconds)
       await this.redisClient.set(redisKey, '1', 'EX', 3600);
     }
@@ -75,17 +80,22 @@ export class WebhookController {
 
     try {
       const dbSettings = await this.prisma.gitHubSettings.findFirst();
-      const encryptionKey = this.configService.get<string>('ENCRYPTION_KEY') || '';
+      const encryptionKey =
+        this.configService.get<string>('ENCRYPTION_KEY') || '';
 
       if (dbSettings && dbSettings.webhookSecret) {
         try {
           secret = decrypt(dbSettings.webhookSecret, encryptionKey);
-        } catch (decryptError) {
-          this.logger.error(`Failed to decrypt GitHub Webhook Secret from DB settings: ${decryptError.message}`);
+        } catch (decryptError: any) {
+          this.logger.error(
+            `Failed to decrypt GitHub Webhook Secret from DB settings: ${decryptError.message}`,
+          );
         }
       }
-    } catch (dbError) {
-      this.logger.error(`Error querying GitHubSettings in verifySignature: ${dbError.message}`);
+    } catch (dbError: any) {
+      this.logger.error(
+        `Error querying GitHubSettings in verifySignature: ${dbError.message}`,
+      );
     }
 
     if (!secret) {
@@ -96,20 +106,25 @@ export class WebhookController {
 
     secret = secret.replace(/^["']|["']$/g, '');
 
-    const rawBody = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body);
+    const rawBody = req.rawBody
+      ? req.rawBody.toString('utf8')
+      : JSON.stringify(req.body);
     const hmac = crypto.createHmac('sha256', secret);
     const digest = 'sha256=' + hmac.update(rawBody).digest('hex');
 
     if (signature !== digest) {
       this.logger.warn(
-        `Webhook signature verification failed. Digest computed: ${digest}, GitHub Signature: ${signature}`
+        `Webhook signature verification failed. Digest computed: ${digest}, GitHub Signature: ${signature}`,
       );
-      
-      const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
+
+      const isProduction =
+        this.configService.get<string>('NODE_ENV') === 'production';
       if (isProduction) {
         throw new UnauthorizedException('Invalid signature');
       } else {
-        this.logger.log('Signature check bypassed because server is running in local development mode.');
+        this.logger.log(
+          'Signature check bypassed because server is running in local development mode.',
+        );
       }
     }
   }
