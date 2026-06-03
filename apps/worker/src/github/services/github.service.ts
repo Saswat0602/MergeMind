@@ -14,7 +14,7 @@ export class GithubService {
     private readonly prisma: PrismaService,
   ) {}
 
-  private async getAppOctokit(
+  public async getAppOctokit(
     installationId: bigint | number,
   ): Promise<Octokit> {
     let appId: string | undefined;

@@ -65,11 +65,16 @@ export class AiPipelineService {
       userPrompt,
     });
 
-    // Step 5: Parse JSON
-    const parsedResponse = this.responseParser.parse(
+    // Step 5: Parse JSON (with Self-Correction ReAct loop support)
+    const parsedResponse = await this.responseParser.parse(
       llmResult.isConsensus
         ? (llmResult as any).responses
         : (llmResult as any).responseText,
+      {
+        settings,
+        systemPrompt,
+        userPrompt,
+      }
     );
 
     // Step 6: Score and Filter

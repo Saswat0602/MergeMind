@@ -1,15 +1,22 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AiReviewResponse } from '../ai-models';
+import { LlmCallerAgent } from './llm-caller.agent';
 
 @Injectable()
 export class ResponseParserAgent {
   private readonly logger = new Logger(ResponseParserAgent.name);
 
-  parse(text: string | string[]): AiReviewResponse {
+  constructor(private readonly llmCaller: LlmCallerAgent) {}
+
+  async parse(
+    text: string | string[],
+    contextForRetry?: { settings: any; systemPrompt: string; userPrompt: string },
+    retryCount = 0,
+  ): Promise<AiReviewResponse> {
     if (Array.isArray(text)) {
       // Consensus mode: parse both and return an array of parsed
-      const p1 = this.parseSingle(text[0]);
-      const p2 = this.parseSingle(text[1]);
+      const p1 = await this.parseSingle(text[0], contextForRetry, retryCount);
+      const p2 = await this.parseSingle(text[1], contextForRetry, retryCount);
       return {
         isConsensus: true,
         responses: [p1, p2],
@@ -19,10 +26,14 @@ export class ResponseParserAgent {
       } as any;
     }
 
-    return this.parseSingle(text);
+    return this.parseSingle(text, contextForRetry, retryCount);
   }
 
-  private parseSingle(text: string): AiReviewResponse {
+  private async parseSingle(
+    text: string,
+    contextForRetry?: { settings: any; systemPrompt: string; userPrompt: string },
+    retryCount = 0,
+  ): Promise<AiReviewResponse> {
     let cleanText = text.trim();
 
     if (cleanText.includes('```')) {
@@ -62,11 +73,40 @@ export class ResponseParserAgent {
           truncated += '}';
 
           parsed = JSON.parse(truncated);
+        } else {
+          throw new Error('No JSON object found to repair.');
         }
       } catch (repairError: any) {
-        throw new Error(
-          `AI returned malformed JSON: ${firstError.message} (Repair failed: ${repairError.message})`,
-        );
+        if (contextForRetry && retryCount < 2) {
+          this.logger.warn(`Repair failed. Triggering Self-Correction ReAct Loop (Attempt ${retryCount + 1}/2)`);
+          
+          const correctionPrompt = `
+You previously returned a response that could not be parsed as valid JSON.
+The JSON parser threw the following error: ${firstError.message}
+The raw text you returned was:
+\`\`\`
+${text}
+\`\`\`
+
+Please FIX the syntax errors and return strictly valid JSON matching the schema. DO NOT wrap the output in markdown codeblocks. Return ONLY the raw JSON object.
+          `;
+          
+          const llmResult = await this.llmCaller.execute({
+            settings: contextForRetry.settings,
+            systemPrompt: contextForRetry.systemPrompt,
+            userPrompt: contextForRetry.userPrompt + '\n\n' + correctionPrompt,
+          });
+
+          return this.parseSingle(
+            llmResult.isConsensus ? (llmResult as any).responses[0] : (llmResult as any).responseText,
+            contextForRetry,
+            retryCount + 1
+          );
+        } else {
+          throw new Error(
+            `AI returned malformed JSON: ${firstError.message} (Repair failed: ${repairError.message})`,
+          );
+        }
       }
     }
 
