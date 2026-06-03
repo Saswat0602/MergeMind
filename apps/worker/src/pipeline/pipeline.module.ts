@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AiPipelineService } from './ai-pipeline.service';
 import { SettingsResolverAgent } from './agents/settings-resolver.agent';
+import { IntentRouterAgent } from './agents/intent-router.agent';
 import { PromptBuilderAgent } from './agents/prompt-builder.agent';
 import { DiffPreprocessorAgent } from './agents/diff-preprocessor.agent';
 import { LlmCallerAgent } from './agents/llm-caller.agent';
@@ -14,6 +15,7 @@ import { PrismaService } from '@mergemind/database';
   providers: [
     AiPipelineService,
     SettingsResolverAgent,
+    IntentRouterAgent,
     PromptBuilderAgent,
     DiffPreprocessorAgent,
     LlmCallerAgent,
