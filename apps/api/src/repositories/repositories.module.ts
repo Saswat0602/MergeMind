@@ -1,4 +1,5 @@
 import { Module, Global } from '@nestjs/common';
+import { PrismaService } from '@mergemind/database';
 import { AiUsageLogRepository } from './ai-usage-log.repository';
 import { JobRepository } from './job.repository';
 import { PullRequestRepository } from './pull-request.repository';
@@ -9,6 +10,7 @@ import { ReviewResultRepository } from './review-result.repository';
 @Global()
 @Module({
   providers: [
+    PrismaService,
     AiUsageLogRepository,
     JobRepository,
     PullRequestRepository,

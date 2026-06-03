@@ -3,8 +3,8 @@
   "private": true,
   "scripts": {
     "build": "turbo build",
-    "dev": "(fuser -k 3000/tcp 3001/tcp || true) && (npx smee-client -u https://smee.io/JMctmhkk2itLOKjl -p 3000 -P /github/webhook & turbo dev)",
-    "webhook:listen": "npx smee-client -u https://smee.io/JMctmhkk2itLOKjl -p 3000 -P /github/webhook",
+    "dev": "(fuser -k 3001/tcp 3002/tcp 3003/tcp || true) && (npx smee-client -u https://smee.io/JMctmhkk2itLOKjl -p 3003 -P /github/webhook & turbo dev)",
+    "webhook:listen": "npx smee-client -u https://smee.io/JMctmhkk2itLOKjl -p 3003 -P /github/webhook",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "db:generate": "dotenv -e .env -- npm run generate -w @mergemind/database",

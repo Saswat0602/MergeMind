@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { SseToast } from './SseToast';
 
 // ── Icons ────────────────────────────────────────────────────
 function IconHome() {
@@ -227,6 +228,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {children}
       </main>
+      <SseToast />
     </div>
   );
 }
