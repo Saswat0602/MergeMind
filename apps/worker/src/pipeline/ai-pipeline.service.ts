@@ -41,59 +41,87 @@ export class AiPipelineService {
     const settings = await this.settingsResolver.resolve();
 
     // Step 2: Preprocess Diff
-    const { cleanDiff } = this.diffPreprocessor.process(context.diffContent);
-    if (!cleanDiff || cleanDiff.trim() === '') {
+    const { cleanChunks } = this.diffPreprocessor.process(context.diffContent);
+    if (!cleanChunks || cleanChunks.length === 0) {
       this.logger.warn(
         `Diff preprocessor yielded empty diff for Job ${context.analysisJobId}`,
       );
       return { success: true, empty: true };
     }
 
-    // Step 3: Build Prompt
-    const { systemPrompt, userPrompt } = this.promptBuilder.build({
-      settings,
-      prTitle: context.prTitle,
-      prDescription: context.prDescription,
-      cleanDiff,
-      rules: context.rules,
-    });
+    const allComments: any[] = [];
+    let maxSeverityScore = 0;
+    let combinedSummary = '';
+    const aggregateUsage = {
+      promptTokens: 0,
+      completionTokens: 0,
+      latencyMs: 0,
+      modelUsed: '',
+      logIds: [] as string[],
+    };
 
-    // Step 4: Call LLM
-    const llmResult = await this.llmCaller.execute({
-      settings,
-      systemPrompt,
-      userPrompt,
-    });
+    let chunkIndex = 1;
+    for (const chunk of cleanChunks) {
+      this.logger.log(`Processing Chunk ${chunkIndex}/${cleanChunks.length} for Job ${context.analysisJobId}`);
 
-    // Step 5: Parse JSON (with Self-Correction ReAct loop support)
-    const parsedResponse = await this.responseParser.parse(
-      llmResult.isConsensus
-        ? (llmResult as any).responses
-        : (llmResult as any).responseText,
-      {
+      // Step 3: Build Prompt
+      const { systemPrompt, userPrompt } = this.promptBuilder.build({
+        settings,
+        prTitle: context.prTitle,
+        prDescription: context.prDescription,
+        cleanDiff: chunk,
+        rules: context.rules,
+      });
+
+      // Step 4: Call LLM
+      const llmResult = await this.llmCaller.execute({
         settings,
         systemPrompt,
         userPrompt,
-      }
-    );
+      });
 
-    // Step 6: Score and Filter
-    const finalResponse = this.severityScorer.scoreAndFilter({
-      response: parsedResponse,
-      isPushEvent: context.isPushEvent,
-    });
+      // Step 5: Parse JSON (with Self-Correction ReAct loop support)
+      const parsedResponse = await this.responseParser.parse(
+        llmResult.isConsensus
+          ? (llmResult as any).responses
+          : (llmResult as any).responseText,
+        {
+          settings,
+          systemPrompt,
+          userPrompt,
+        }
+      );
+
+      // Step 6: Score and Filter
+      const finalResponse = this.severityScorer.scoreAndFilter({
+        response: parsedResponse,
+        isPushEvent: context.isPushEvent,
+      });
+
+      allComments.push(...finalResponse.comments);
+      maxSeverityScore = Math.max(maxSeverityScore, finalResponse.severityScore ?? 0);
+      combinedSummary += `\n\n--- Chunk ${chunkIndex} Analysis ---\n${finalResponse.summary}`;
+
+      aggregateUsage.promptTokens += llmResult.promptTokens;
+      aggregateUsage.completionTokens += llmResult.completionTokens;
+      aggregateUsage.latencyMs += llmResult.latencyMs;
+      aggregateUsage.modelUsed = llmResult.modelUsed;
+      aggregateUsage.logIds.push(...llmResult.logIds);
+
+      chunkIndex++;
+    }
+
+    const aggregatedResponse = {
+      summary: combinedSummary.trim(),
+      severityScore: maxSeverityScore,
+      comments: allComments,
+    };
 
     // Step 7: Persist
     const reviewResultId = await this.reviewPersister.persist({
-      response: finalResponse,
+      response: aggregatedResponse as any,
       context,
-      usage: {
-        promptTokens: llmResult.promptTokens,
-        completionTokens: llmResult.completionTokens,
-        latencyMs: llmResult.latencyMs,
-        modelUsed: llmResult.modelUsed,
-        logIds: llmResult.logIds,
-      },
+      usage: aggregateUsage,
     });
 
     this.logger.log(

@@ -4,6 +4,7 @@ import { Job } from 'bullmq';
 import { PrismaService } from '@mergemind/database';
 import { GithubService } from '../services/github.service';
 import { GithubCheckRunService } from '../services/github-check-run.service';
+import { EventBroadcasterService } from '../services/event-broadcaster.service';
 import { AiPipelineService } from '../../pipeline/ai-pipeline.service';
 
 @Processor('pr-review', { concurrency: 3 })
@@ -14,6 +15,7 @@ export class PrReviewProcessor extends WorkerHost {
     private readonly prisma: PrismaService,
     private readonly githubService: GithubService,
     private readonly githubCheckRunService: GithubCheckRunService,
+    private readonly eventBroadcaster: EventBroadcasterService,
     private readonly aiPipelineService: AiPipelineService,
   ) {
     super();
@@ -43,6 +45,7 @@ export class PrReviewProcessor extends WorkerHost {
       where: { id: analysisJobId },
       data: { status: 'PROCESSING', step: 'FETCHING_DIFF' },
     });
+    this.eventBroadcaster.broadcastJobUpdate(analysisJobId, 'PROCESSING', 'FETCHING_DIFF', undefined, pullRequestId);
 
     let installationId: bigint | number | undefined;
     let repositoryId: string | undefined;
@@ -120,6 +123,7 @@ export class PrReviewProcessor extends WorkerHost {
           where: { id: analysisJobId },
           data: { status: 'COMPLETED', step: 'COMPLETED' },
         });
+        this.eventBroadcaster.broadcastJobUpdate(analysisJobId, 'COMPLETED', 'COMPLETED', undefined, pullRequestId);
 
         if (checkRunId) {
           await this.githubCheckRunService.completeCheckRun(
@@ -134,6 +138,7 @@ export class PrReviewProcessor extends WorkerHost {
         where: { id: analysisJobId },
         data: { step: 'AI_ANALYSIS' },
       });
+      this.eventBroadcaster.broadcastJobUpdate(analysisJobId, 'PROCESSING', 'AI_ANALYSIS', undefined, pullRequestId);
 
       const rules = await this.prisma.repositoryRule.findMany({
         where: { repositoryId: repositoryId, isEnabled: true },
@@ -162,6 +167,7 @@ export class PrReviewProcessor extends WorkerHost {
           where: { id: analysisJobId },
           data: { status: 'COMPLETED', step: 'COMPLETED' },
         });
+        this.eventBroadcaster.broadcastJobUpdate(analysisJobId, 'COMPLETED', 'COMPLETED', undefined, pullRequestId);
 
         if (checkRunId) {
           await this.githubCheckRunService.completeCheckRun(
@@ -179,6 +185,7 @@ export class PrReviewProcessor extends WorkerHost {
         where: { id: analysisJobId },
         data: { step: 'POSTING' },
       });
+      this.eventBroadcaster.broadcastJobUpdate(analysisJobId, 'PROCESSING', 'POSTING', undefined, pullRequestId);
 
       // Retrieve the saved ReviewResult to post to GitHub
       const reviewResult = await this.prisma.reviewResult.findUnique({
@@ -256,6 +263,7 @@ export class PrReviewProcessor extends WorkerHost {
         where: { id: analysisJobId },
         data: { status: 'COMPLETED', step: 'COMPLETED' },
       });
+      this.eventBroadcaster.broadcastJobUpdate(analysisJobId, 'COMPLETED', 'COMPLETED', undefined, pullRequestId);
 
       if (checkRunId) {
         const severityScore = reviewResult.severityScore ?? 0;
@@ -282,6 +290,7 @@ export class PrReviewProcessor extends WorkerHost {
         .catch((err) =>
           this.logger.error(`Failed to update job error state: ${err.message}`),
         );
+      this.eventBroadcaster.broadcastJobUpdate(analysisJobId, 'FAILED', 'FAILED', error.message, pullRequestId);
 
       // We need to resolve installationId, owner, repoName from context if it failed later, 
       // but they might not be defined if it failed early.

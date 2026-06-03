@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ScrubberService } from '../../github/services/scrubber.service';
-import { filterAndTruncateDiff } from '../../github/utils/diff-filter';
+import { chunkDiff } from '../../github/utils/diff-filter';
 
 @Injectable()
 export class DiffPreprocessorAgent {
@@ -9,7 +9,7 @@ export class DiffPreprocessorAgent {
   constructor(private readonly scrubber: ScrubberService) {}
 
   process(diffContent: string) {
-    const { filteredDiff, skippedCount } = filterAndTruncateDiff(diffContent);
+    const { chunks, skippedCount } = chunkDiff(diffContent);
 
     if (skippedCount > 0) {
       this.logger.log(
@@ -17,8 +17,8 @@ export class DiffPreprocessorAgent {
       );
     }
 
-    const cleanDiff = this.scrubber.scrub(filteredDiff);
+    const cleanChunks = chunks.map(chunk => this.scrubber.scrub(chunk));
 
-    return { cleanDiff, skippedCount };
+    return { cleanChunks, skippedCount };
   }
 }

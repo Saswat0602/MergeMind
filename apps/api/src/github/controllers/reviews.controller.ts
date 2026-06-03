@@ -9,8 +9,13 @@ import {
   BadRequestException,
   Logger,
   UseGuards,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { GithubService } from '../services/github.service';
+import { SseService } from '../services/sse.service';
 import { ApiKeyGuard } from '../../common/guards/api-key.guard';
 import { ApplyFixDto } from '../dto/apply-fix.dto';
 import { PullRequestRepository } from '../../repositories/pull-request.repository';
@@ -33,7 +38,17 @@ export class ReviewsController {
     private readonly aiUsageLogRepo: AiUsageLogRepository,
     private readonly repositoryRuleRepo: RepositoryRuleRepository,
     private readonly jobRepo: JobRepository,
+    private readonly sseService: SseService,
   ) {}
+
+  @Sse('events')
+  streamEvents(): Observable<MessageEvent> {
+    return this.sseService.getJobEvents$().pipe(
+      map((event) => ({
+        data: event,
+      } as MessageEvent))
+    );
+  }
 
   @Get('stats')
   async getStats() {

@@ -24,13 +24,13 @@ export function getFilePathFromDiffBlock(block: string): string {
   return '';
 }
 
-export function filterAndTruncateDiff(diffContent: string): {
-  filteredDiff: string;
+export function chunkDiff(diffContent: string): {
+  chunks: string[];
   skippedCount: number;
   skippedSummary: string[];
 } {
   if (!diffContent || diffContent.trim().length === 0) {
-    return { filteredDiff: '', skippedCount: 0, skippedSummary: [] };
+    return { chunks: [], skippedCount: 0, skippedSummary: [] };
   }
 
   const fileBlocks = diffContent.split(/(?=^diff --git )/m);
@@ -81,39 +81,42 @@ export function filterAndTruncateDiff(diffContent: string): {
     acceptedBlocks.push(block);
   }
 
-  let totalLength = 0;
-  const budgetedBlocks: string[] = [];
-  let budgetExceeded = false;
+  const chunks: string[] = [];
+  let currentChunk: string[] = [];
+  let currentChunkLength = 0;
 
   for (const block of acceptedBlocks) {
     if (
-      totalLength + block.length >
+      currentChunkLength + block.length >
       REVIEW_EXCLUSIONS.MAX_TOTAL_DIFF_CHARACTERS
     ) {
-      budgetExceeded = true;
-      const filePath = getFilePathFromDiffBlock(block) || 'unknown file';
-      skippedCount++;
-      skippedSummary.push(`${filePath} (omitted to fit context token budget)`);
-      logger.warn(
-        `Omitting file from review (exceeded total character budget): ${filePath}`,
-      );
-      continue;
+      if (currentChunk.length > 0) {
+        chunks.push(currentChunk.join(''));
+        currentChunk = [];
+        currentChunkLength = 0;
+      }
+      
+      // If a single file block is larger than the max (even after MAX_DIFF_LINE_COUNT check),
+      // we have to omit it or it would break chunking.
+      if (block.length > REVIEW_EXCLUSIONS.MAX_TOTAL_DIFF_CHARACTERS) {
+        const filePath = getFilePathFromDiffBlock(block) || 'unknown file';
+        skippedCount++;
+        skippedSummary.push(`${filePath} (exceeds single chunk character limit)`);
+        logger.warn(`Omitting file from review (exceeds single chunk char limit): ${filePath}`);
+        continue;
+      }
     }
-    budgetedBlocks.push(block);
-    totalLength += block.length;
+    
+    currentChunk.push(block);
+    currentChunkLength += block.length;
   }
 
-  let filteredDiff = budgetedBlocks.join('');
-
-  if (budgetExceeded) {
-    filteredDiff += `\n\n# --- WARNING: DIFF TRUNCATED ---
-# Several files or hunks were omitted from this audit to keep within the MergeMind 128k context token budget.
-# Total characters reached the safety threshold of ${REVIEW_EXCLUSIONS.MAX_TOTAL_DIFF_CHARACTERS}.
-`;
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk.join(''));
   }
 
   return {
-    filteredDiff,
+    chunks,
     skippedCount,
     skippedSummary,
   };

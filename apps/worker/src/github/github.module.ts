@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { GithubService } from './services/github.service';
 import { GithubCheckRunService } from './services/github-check-run.service';
+import { EventBroadcasterService } from './services/event-broadcaster.service';
 import { ScrubberService } from './services/scrubber.service';
 import { PrReviewProcessor } from './processors/pr-review.processor';
 import { PrismaService } from '@mergemind/database';
@@ -17,6 +18,6 @@ import { PipelineModule } from '../pipeline/pipeline.module';
     }),
   ],
   controllers: [],
-  providers: [GithubService, GithubCheckRunService, ScrubberService, PrReviewProcessor, PrismaService],
+  providers: [GithubService, GithubCheckRunService, EventBroadcasterService, ScrubberService, PrReviewProcessor, PrismaService],
 })
 export class GithubModule {}
