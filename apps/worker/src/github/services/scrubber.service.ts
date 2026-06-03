@@ -19,8 +19,8 @@ export class ScrubberService {
     // Private SSH/PEM Keys
     /-----BEGIN [A-Z ]+ PRIVATE KEY-----[\s\S]+?-----END [A-Z ]+ PRIVATE KEY-----/g,
     // General token/password parameters
-    /api_key\s*[:=]\s*["'][a-zA-Z0-9_\-]{16,}["']/gi,
-    /password\s*[:=]\s*["'][a-zA-Z0-9_\-!@#$%^&*()]{8,}["']/gi,
+    /api_key\s*[:=]\s*["'][a-zA-Z0-9_-]{16,}["']/gi,
+    /password\s*[:=]\s*["'][a-zA-Z0-9_-!@#$%^&*()]{8,}["']/gi,
   ];
 
   /**

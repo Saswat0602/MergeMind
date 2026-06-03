@@ -14,24 +14,31 @@ export class GithubService {
     private readonly prisma: PrismaService,
   ) {}
 
-  private async getAppOctokit(installationId: bigint | number): Promise<Octokit> {
+  private async getAppOctokit(
+    installationId: bigint | number,
+  ): Promise<Octokit> {
     let appId: string | undefined;
     let privateKey: string | undefined;
 
     try {
       const dbSettings = await this.prisma.gitHubSettings.findFirst();
-      const encryptionKey = this.configService.get<string>('ENCRYPTION_KEY') || '';
+      const encryptionKey =
+        this.configService.get<string>('ENCRYPTION_KEY') || '';
 
       if (dbSettings && dbSettings.appId && dbSettings.privateKey) {
         appId = dbSettings.appId;
         try {
           privateKey = decrypt(dbSettings.privateKey, encryptionKey);
         } catch (decryptError) {
-          this.logger.error(`Failed to decrypt GitHub Private Key from DB settings: ${decryptError.message}`);
+          this.logger.error(
+            `Failed to decrypt GitHub Private Key from DB settings: ${decryptError.message}`,
+          );
         }
       }
     } catch (dbError) {
-      this.logger.error(`Error querying GitHubSettings from database: ${dbError.message}`);
+      this.logger.error(
+        `Error querying GitHubSettings from database: ${dbError.message}`,
+      );
     }
 
     // Fallback to environment variables if not resolved from database
@@ -41,7 +48,9 @@ export class GithubService {
     }
 
     if (!appId || !privateKey) {
-      throw new Error('GitHub App credentials (App ID or Private Key) are not configured in settings or environment.');
+      throw new Error(
+        'GitHub App credentials (App ID or Private Key) are not configured in settings or environment.',
+      );
     }
 
     // Support base64 encoded private keys (common in production env vars)
@@ -116,14 +125,16 @@ export class GithubService {
         commit_id: commitSha,
         event: 'COMMENT',
         body: summary,
-        comments: comments.map(c => ({
+        comments: comments.map((c) => ({
           path: c.path,
           line: c.line,
           body: c.body,
         })),
       });
 
-      this.logger.log(`Successfully posted PR review on ${owner}/${repo} #${pullNumber}`);
+      this.logger.log(
+        `Successfully posted PR review on ${owner}/${repo} #${pullNumber}`,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to post PR review for ${owner}/${repo} #${pullNumber}: ${error.message}`,
@@ -185,7 +196,9 @@ export class GithubService {
         });
       }
 
-      this.logger.log(`Successfully posted ${comments.length} commit comments on ${owner}/${repo} @ ${commitSha}`);
+      this.logger.log(
+        `Successfully posted ${comments.length} commit comments on ${owner}/${repo} @ ${commitSha}`,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to post commit comments for ${owner}/${repo} @ ${commitSha}: ${error.message}`,
@@ -201,7 +214,8 @@ export class GithubService {
     pullRequestId: string,
     filePath: string,
     suggestion: string,
-    lineNumber: number,
+    startLine: number,
+    endLine?: number,
   ): Promise<{ success: boolean; sha?: string; htmlUrl?: string }> {
     const pr = await this.prisma.pullRequest.findUnique({
       where: { id: pullRequestId },
@@ -222,13 +236,17 @@ export class GithubService {
     const { organization } = repository;
 
     if (!organization.installationId) {
-      throw new Error(`GitHub App Installation ID not found for repository ${repository.fullName}`);
+      throw new Error(
+        `GitHub App Installation ID not found for repository ${repository.fullName}`,
+      );
     }
 
     const [owner, repo] = repository.fullName.split('/');
     const branchName = pr.headBranch || 'main';
 
-    this.logger.log(`Applying AI Suggested patch on ${repository.fullName} branch ${branchName} file ${filePath} line ${lineNumber}`);
+    this.logger.log(
+      `Applying AI Suggested patch on ${repository.fullName} branch ${branchName} file ${filePath} lines ${startLine}-${endLine || startLine}`,
+    );
 
     const octokit = await this.getAppOctokit(organization.installationId);
 
@@ -244,18 +262,28 @@ export class GithubService {
 
       if ('content' in response.data) {
         fileSha = response.data.sha;
-        originalContent = Buffer.from(response.data.content, 'base64').toString('utf8');
+        originalContent = Buffer.from(response.data.content, 'base64').toString(
+          'utf8',
+        );
       } else {
         throw new Error(`Path ${filePath} is not a valid text file`);
       }
     } catch (fetchError) {
-      this.logger.error(`Failed to fetch file ${filePath} from GitHub branch ${branchName}: ${fetchError.message}`);
-      throw new Error(`Failed to locate target file on GitHub: ${fetchError.message}`);
+      this.logger.error(
+        `Failed to fetch file ${filePath} from GitHub branch ${branchName}: ${fetchError.message}`,
+      );
+      throw new Error(
+        `Failed to locate target file on GitHub: ${fetchError.message}`,
+      );
     }
 
     const lines = originalContent.split('\n');
-    if (lineNumber < 1 || lineNumber > lines.length) {
-      throw new Error(`Line number ${lineNumber} is out of bounds for file ${filePath} (total lines: ${lines.length})`);
+    const targetEndLine = endLine || startLine;
+    
+    if (startLine < 1 || targetEndLine > lines.length || startLine > targetEndLine) {
+      throw new Error(
+        `Line range ${startLine}-${targetEndLine} is out of bounds for file ${filePath} (total lines: ${lines.length})`,
+      );
     }
 
     let cleanSuggestion = suggestion.trim();
@@ -266,7 +294,8 @@ export class GithubService {
       }
     }
 
-    lines[lineNumber - 1] = cleanSuggestion;
+    // Replace the specific range with the new suggestion
+    lines.splice(startLine - 1, targetEndLine - startLine + 1, cleanSuggestion);
     const updatedContent = lines.join('\n');
 
     try {
@@ -274,7 +303,7 @@ export class GithubService {
         owner,
         repo,
         path: filePath,
-        message: `style(audit): Apply AI Suggested Hotfix on ${filePath} line ${lineNumber}`,
+        message: `style(audit): Apply AI Suggested Hotfix on ${filePath} lines ${startLine}-${targetEndLine}`,
         content: Buffer.from(updatedContent).toString('base64'),
         sha: fileSha,
         branch: branchName,
@@ -294,18 +323,23 @@ export class GithubService {
   async syncInstallationRepositories(): Promise<void> {
     try {
       const installations = await this.prisma.gitHubInstallation.findMany();
-      this.logger.log(`Syncing repositories for ${installations.length} installations...`);
+      this.logger.log(
+        `Syncing repositories for ${installations.length} installations...`,
+      );
 
       for (const inst of installations) {
         try {
           const octokit = await this.getAppOctokit(inst.githubId);
           // Fetch accessible repositories from GitHub
-          const response = await octokit.rest.apps.listReposAccessibleToInstallation({
-            per_page: 100,
-          });
+          const response =
+            await octokit.rest.apps.listReposAccessibleToInstallation({
+              per_page: 100,
+            });
 
           const repos = response.data.repositories || [];
-          this.logger.log(`Found ${repos.length} accessible repos on GitHub for installation ${inst.githubId}`);
+          this.logger.log(
+            `Found ${repos.length} accessible repos on GitHub for installation ${inst.githubId}`,
+          );
 
           for (const ghRepo of repos) {
             // Find or create Organization for the repository owner
@@ -342,11 +376,15 @@ export class GithubService {
             });
           }
         } catch (instError) {
-          this.logger.error(`Failed to sync repos for installation ${inst.githubId}: ${instError.message}`);
+          this.logger.error(
+            `Failed to sync repos for installation ${inst.githubId}: ${instError.message}`,
+          );
         }
       }
     } catch (err) {
-      this.logger.error(`Error in syncInstallationRepositories: ${err.message}`);
+      this.logger.error(
+        `Error in syncInstallationRepositories: ${err.message}`,
+      );
     }
   }
 }

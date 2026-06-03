@@ -2,17 +2,23 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@mergemind/database';
 import { encrypt, decrypt } from './utils/crypto';
+import Redis from 'ioredis';
 
 @Injectable()
 export class SettingsService {
   private readonly logger = new Logger(SettingsService.name);
   private readonly encryptionKey: string;
-  private readonly maskedPlaceholder = 'sk-or-v1-****************************************';
+  private readonly maskedPlaceholder =
+    'sk-or-v1-****************************************';
+  private readonly redis: Redis;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
   ) {
+    this.redis = new Redis(
+      this.configService.get<string>('REDIS_URL') || 'redis://localhost:6379',
+    );
     this.encryptionKey = this.configService.get<string>('ENCRYPTION_KEY') || '';
     if (!this.encryptionKey) {
       this.logger.error('ENCRYPTION_KEY environment variable is not defined!');
@@ -24,27 +30,46 @@ export class SettingsService {
    * @param decrypted If true, returns the decrypted API key. Otherwise returns masked version.
    */
   async getSettings(decrypted = false) {
-    let settings = await this.prisma.aiSettings.findFirst();
-    
-    if (!settings) {
-      this.logger.log('No AI settings found. Creating default configuration.');
-      settings = await this.prisma.aiSettings.create({
-        data: {
-          defaultModel: 'deepseek/deepseek-v4-flash:free',
-          fallbackModel: 'arcee-ai/trinity-large-thinking:free',
-          isFallbackEnabled: true,
-          temperature: 0.1,
-          maxTokens: 30000,
-          bypassSignature: true,
-        },
-      });
+    const settingsStr = await this.redis.get('ai:settings:raw');
+    let settings: any = null;
+
+    if (settingsStr) {
+      settings = JSON.parse(settingsStr);
+    } else {
+      settings = await this.prisma.aiSettings.findFirst();
+
+      if (!settings) {
+        this.logger.log(
+          'No AI settings found. Creating default configuration.',
+        );
+        settings = await this.prisma.aiSettings.create({
+          data: {
+            defaultModel: 'deepseek/deepseek-v4-flash:free',
+            fallbackModel: 'arcee-ai/trinity-large-thinking:free',
+            isFallbackEnabled: true,
+            temperature: 0.1,
+            maxTokens: 30000,
+            bypassSignature: true,
+          },
+        });
+      }
+
+      await this.redis.set(
+        'ai:settings:raw',
+        JSON.stringify(settings),
+        'EX',
+        300,
+      );
     }
 
     const response = { ...settings };
 
     if (settings.openRouterKey) {
       if (decrypted) {
-        response.openRouterKey = decrypt(settings.openRouterKey, this.encryptionKey);
+        response.openRouterKey = decrypt(
+          settings.openRouterKey,
+          this.encryptionKey,
+        );
       } else {
         response.openRouterKey = this.maskedPlaceholder;
       }
@@ -85,7 +110,10 @@ export class SettingsService {
         updateData.openRouterKey = null;
       } else {
         // User entered a new key, encrypt it
-        updateData.openRouterKey = encrypt(data.openRouterKey.trim(), this.encryptionKey);
+        updateData.openRouterKey = encrypt(
+          data.openRouterKey.trim(),
+          this.encryptionKey,
+        );
       }
     }
 
@@ -99,8 +127,10 @@ export class SettingsService {
       result = await this.prisma.aiSettings.create({
         data: {
           ...updateData,
-          defaultModel: updateData.defaultModel || 'deepseek/deepseek-v4-flash:free',
-          fallbackModel: updateData.fallbackModel || 'arcee-ai/trinity-large-thinking:free',
+          defaultModel:
+            updateData.defaultModel || 'deepseek/deepseek-v4-flash:free',
+          fallbackModel:
+            updateData.fallbackModel || 'arcee-ai/trinity-large-thinking:free',
           isFallbackEnabled: updateData.isFallbackEnabled ?? true,
           temperature: updateData.temperature ?? 0.1,
           maxTokens: updateData.maxTokens ?? 30000,
@@ -109,6 +139,8 @@ export class SettingsService {
       });
     }
 
+    await this.redis.del('ai:settings:raw');
+
     // Return settings with masked key for security
     const response = { ...result };
     if (result.openRouterKey) {
@@ -116,14 +148,16 @@ export class SettingsService {
     } else {
       response.openRouterKey = '';
     }
-    
+
     return response;
   }
 
   /**
    * Tests the connection with OpenRouter using either the provided key or the saved key.
    */
-  async testConnection(apiKey?: string): Promise<{ success: boolean; message: string }> {
+  async testConnection(
+    apiKey?: string,
+  ): Promise<{ success: boolean; message: string }> {
     let keyToTest = apiKey;
 
     if (!keyToTest || keyToTest === this.maskedPlaceholder) {
@@ -149,7 +183,9 @@ export class SettingsService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        this.logger.error(`OpenRouter connection test failed with status ${response.status}: ${errorText}`);
+        this.logger.error(
+          `OpenRouter connection test failed with status ${response.status}: ${errorText}`,
+        );
 
         await this.prisma.aiUsageLog.create({
           data: {
@@ -189,7 +225,9 @@ export class SettingsService {
       };
     } catch (error) {
       const latencyMs = Date.now() - startTime;
-      this.logger.error(`OpenRouter connection test encountered network error: ${error.message}`);
+      this.logger.error(
+        `OpenRouter connection test encountered network error: ${error.message}`,
+      );
 
       await this.prisma.aiUsageLog.create({
         data: {
@@ -217,7 +255,22 @@ export class SettingsService {
    * @param decrypted If true, returns decrypted secrets. Otherwise, returns masked placeholders.
    */
   async getGitHubSettings(decrypted = false) {
-    let settings = await this.prisma.gitHubSettings.findFirst();
+    const settingsStr = await this.redis.get('github:settings:raw');
+    let settings: any = null;
+
+    if (settingsStr) {
+      settings = JSON.parse(settingsStr);
+    } else {
+      settings = await this.prisma.gitHubSettings.findFirst();
+      if (settings) {
+        await this.redis.set(
+          'github:settings:raw',
+          JSON.stringify(settings),
+          'EX',
+          300,
+        );
+      }
+    }
 
     if (!settings) {
       return {
@@ -232,19 +285,25 @@ export class SettingsService {
     const response: any = { ...settings };
 
     if (settings.privateKey) {
-      response.privateKey = decrypted ? decrypt(settings.privateKey, this.encryptionKey) : this.githubMasked;
+      response.privateKey = decrypted
+        ? decrypt(settings.privateKey, this.encryptionKey)
+        : this.githubMasked;
     } else {
       response.privateKey = '';
     }
 
     if (settings.webhookSecret) {
-      response.webhookSecret = decrypted ? decrypt(settings.webhookSecret, this.encryptionKey) : this.githubMasked;
+      response.webhookSecret = decrypted
+        ? decrypt(settings.webhookSecret, this.encryptionKey)
+        : this.githubMasked;
     } else {
       response.webhookSecret = '';
     }
 
     if (settings.clientSecret) {
-      response.clientSecret = decrypted ? decrypt(settings.clientSecret, this.encryptionKey) : this.githubMasked;
+      response.clientSecret = decrypted
+        ? decrypt(settings.clientSecret, this.encryptionKey)
+        : this.githubMasked;
     } else {
       response.clientSecret = '';
     }
@@ -272,7 +331,10 @@ export class SettingsService {
       } else if (data.privateKey.trim() === '') {
         updateData.privateKey = null;
       } else {
-        updateData.privateKey = encrypt(data.privateKey.trim(), this.encryptionKey);
+        updateData.privateKey = encrypt(
+          data.privateKey.trim(),
+          this.encryptionKey,
+        );
       }
     }
 
@@ -282,7 +344,10 @@ export class SettingsService {
       } else if (data.webhookSecret.trim() === '') {
         updateData.webhookSecret = null;
       } else {
-        updateData.webhookSecret = encrypt(data.webhookSecret.trim(), this.encryptionKey);
+        updateData.webhookSecret = encrypt(
+          data.webhookSecret.trim(),
+          this.encryptionKey,
+        );
       }
     }
 
@@ -292,7 +357,10 @@ export class SettingsService {
       } else if (data.clientSecret.trim() === '') {
         updateData.clientSecret = null;
       } else {
-        updateData.clientSecret = encrypt(data.clientSecret.trim(), this.encryptionKey);
+        updateData.clientSecret = encrypt(
+          data.clientSecret.trim(),
+          this.encryptionKey,
+        );
       }
     }
 
@@ -308,6 +376,8 @@ export class SettingsService {
       });
     }
 
+    await this.redis.del('github:settings:raw');
+
     // Mask output before returning
     const response: any = { ...result };
     if (result.privateKey) response.privateKey = this.githubMasked;
@@ -320,7 +390,10 @@ export class SettingsService {
   /**
    * Tests connection with GitHub using the provided App ID and Private Key (or loaded from DB).
    */
-  async testGitHubConnection(appId?: string, privateKey?: string): Promise<{ success: boolean; message: string }> {
+  async testGitHubConnection(
+    appId?: string,
+    privateKey?: string,
+  ): Promise<{ success: boolean; message: string }> {
     let testAppId = appId;
     let testPrivateKey = privateKey;
 
@@ -328,11 +401,19 @@ export class SettingsService {
     if (!testAppId || !testPrivateKey || testPrivateKey === this.githubMasked) {
       const saved = await this.getGitHubSettings(true);
       if (!testAppId) testAppId = saved.appId || undefined;
-      if (!testPrivateKey || testPrivateKey === this.githubMasked) testPrivateKey = saved.privateKey || undefined;
+      if (!testPrivateKey || testPrivateKey === this.githubMasked)
+        testPrivateKey = saved.privateKey || undefined;
     }
 
-    if (!testAppId || !testPrivateKey || testAppId.trim() === '' || testPrivateKey.trim() === '') {
-      throw new BadRequestException('GitHub App ID and Private Key are required to test connection');
+    if (
+      !testAppId ||
+      !testPrivateKey ||
+      testAppId.trim() === '' ||
+      testPrivateKey.trim() === ''
+    ) {
+      throw new BadRequestException(
+        'GitHub App ID and Private Key are required to test connection',
+      );
     }
 
     try {
@@ -359,7 +440,7 @@ export class SettingsService {
 
       // Handshake with GitHub App endpoint
       const { data } = await octokit.rest.apps.getAuthenticated();
-      
+
       const appName = data?.name || 'MergeMind';
       const ownerName = (data?.owner as any)?.login || 'Unknown';
 

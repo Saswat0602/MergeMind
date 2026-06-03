@@ -57,7 +57,7 @@ export class GithubService {
     if (!privateKey.includes('-----BEGIN')) {
       try {
         privateKey = Buffer.from(privateKey, 'base64').toString('utf8');
-      } catch (err: any) {
+      } catch {
         // Fallback
       }
     }
@@ -214,7 +214,8 @@ export class GithubService {
     pullRequestId: string,
     filePath: string,
     suggestion: string,
-    lineNumber: number,
+    startLine: number,
+    endLine?: number,
   ): Promise<{ success: boolean; sha?: string; htmlUrl?: string }> {
     const pr = await this.prisma.pullRequest.findUnique({
       where: { id: pullRequestId },
@@ -244,7 +245,7 @@ export class GithubService {
     const branchName = pr.headBranch || 'main';
 
     this.logger.log(
-      `Applying AI Suggested patch on ${repository.fullName} branch ${branchName} file ${filePath} line ${lineNumber}`,
+      `Applying AI Suggested patch on ${repository.fullName} branch ${branchName} file ${filePath} lines ${startLine}-${endLine || startLine}`,
     );
 
     const octokit = await this.getAppOctokit(organization.installationId);
@@ -277,9 +278,10 @@ export class GithubService {
     }
 
     const lines = originalContent.split('\n');
-    if (lineNumber < 1 || lineNumber > lines.length) {
+    const targetEndLine = endLine || startLine;
+    if (startLine < 1 || targetEndLine > lines.length || startLine > targetEndLine) {
       throw new Error(
-        `Line number ${lineNumber} is out of bounds for file ${filePath} (total lines: ${lines.length})`,
+        `Line range ${startLine}-${targetEndLine} is out of bounds for file ${filePath} (total lines: ${lines.length})`,
       );
     }
 
@@ -291,7 +293,7 @@ export class GithubService {
       }
     }
 
-    lines[lineNumber - 1] = cleanSuggestion;
+    lines.splice(startLine - 1, targetEndLine - startLine + 1, cleanSuggestion);
     const updatedContent = lines.join('\n');
 
     try {
@@ -299,7 +301,7 @@ export class GithubService {
         owner,
         repo,
         path: filePath,
-        message: `style(audit): Apply AI Suggested Hotfix on ${filePath} line ${lineNumber}`,
+        message: `style(audit): Apply AI Suggested Hotfix on ${filePath} lines ${startLine}-${targetEndLine}`,
         content: Buffer.from(updatedContent).toString('base64'),
         sha: fileSha,
         branch: branchName,

@@ -63,7 +63,6 @@ export class AiPipelineService {
       settings,
       systemPrompt,
       userPrompt,
-      actionDescription: context.actionDescription,
     });
 
     // Step 5: Parse JSON

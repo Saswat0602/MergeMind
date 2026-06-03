@@ -8,9 +8,8 @@ export class LlmCallerAgent {
     settings: any;
     systemPrompt: string;
     userPrompt: string;
-    actionDescription: string;
   }) {
-    const { settings, systemPrompt, userPrompt, actionDescription } = params;
+    const { settings, systemPrompt, userPrompt } = params;
 
     // Consensus execution
     if (settings.isConsensusEnabled) {
@@ -25,7 +24,6 @@ export class LlmCallerAgent {
           userPrompt,
           settings.temperature,
           settings.maxTokens,
-          `${actionDescription} (Primary)`,
         ),
         this.executeSingleCall(
           settings.apiKey,
@@ -34,7 +32,6 @@ export class LlmCallerAgent {
           userPrompt,
           settings.temperature,
           settings.maxTokens,
-          `${actionDescription} (Peer)`,
         ),
       ]);
 
@@ -70,7 +67,6 @@ export class LlmCallerAgent {
         userPrompt,
         settings.temperature,
         settings.maxTokens,
-        actionDescription,
       );
     } catch (err: any) {
       if (!settings.isFallbackEnabled) {
@@ -88,7 +84,6 @@ export class LlmCallerAgent {
         userPrompt,
         settings.temperature,
         settings.maxTokens,
-        `${actionDescription} (Fallback)`,
       );
     }
   }
@@ -100,7 +95,6 @@ export class LlmCallerAgent {
     userPrompt: string,
     temperature: number,
     maxTokens: number,
-    actionDescription: string,
   ) {
     const startTime = Date.now();
     const response = await fetch(

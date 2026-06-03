@@ -28,7 +28,9 @@ describe('ReviewsController', () => {
 
   const mockPrismaService = {};
   const mockGithubService = {
-    applyCommitPatch: jest.fn().mockResolvedValue({ success: true, sha: 'mock-sha' }),
+    applyCommitPatch: jest
+      .fn()
+      .mockResolvedValue({ success: true, sha: 'mock-sha' }),
   };
 
   beforeEach(async () => {
@@ -52,7 +54,7 @@ describe('ReviewsController', () => {
           filePath: 'src/main.ts',
           suggestion: 'const x = ; // syntax error',
           lineNumber: 10,
-        })
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -63,7 +65,7 @@ describe('ReviewsController', () => {
           filePath: 'config.json',
           suggestion: '{ "invalid": ',
           lineNumber: 5,
-        })
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -80,7 +82,7 @@ describe('ReviewsController', () => {
         'pr-id',
         'src/main.ts',
         'const x = 42;\nconsole.log(x);',
-        10
+        10,
       );
     });
 

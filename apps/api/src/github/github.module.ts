@@ -6,9 +6,6 @@ import { PrismaService } from '@mergemind/database';
 @Module({
   imports: [],
   controllers: [ReviewsController],
-  providers: [
-    GithubService,
-    PrismaService,
-  ],
+  providers: [GithubService, PrismaService],
 })
 export class GithubModule {}

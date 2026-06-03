@@ -6,4 +6,4 @@ async function bootstrap() {
   await app.listen();
   console.log(`Worker application is running.`);
 }
-bootstrap();
+bootstrap().catch((err) => console.error(err));

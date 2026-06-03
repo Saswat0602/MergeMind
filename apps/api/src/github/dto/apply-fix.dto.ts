@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsInt, Min, IsOptional, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsInt,
+  Min,
+  IsOptional,
+  IsUUID,
+} from 'class-validator';
 
 export class ApplyFixDto {
   @IsUUID()
@@ -11,7 +18,12 @@ export class ApplyFixDto {
 
   @IsInt()
   @Min(1)
-  lineNumber: number;
+  startLine: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  endLine?: number;
 
   @IsString()
   @IsNotEmpty()

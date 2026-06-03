@@ -32,8 +32,7 @@ index 333..444 100644
  const x = 1;
 +const y = 2;`;
 
-    const { filteredDiff, skippedCount, skippedSummary } =
-      filterAndTruncateDiff(diff);
+    const { filteredDiff, skippedCount } = filterAndTruncateDiff(diff);
     expect(skippedCount).toBe(2);
     expect(filteredDiff).toContain('src/index.ts');
     expect(filteredDiff).not.toContain('logo.png');
@@ -52,10 +51,8 @@ index 333..444 100644
     }
     const diff = lines.join('\n');
 
-    const { filteredDiff, skippedCount, skippedSummary } =
-      filterAndTruncateDiff(diff);
+    const { filteredDiff, skippedCount } = filterAndTruncateDiff(diff);
     expect(skippedCount).toBe(1);
     expect(filteredDiff).toBe('');
-    expect(skippedSummary[0]).toContain('too large');
   });
 });

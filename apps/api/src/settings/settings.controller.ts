@@ -30,9 +30,7 @@ export class SettingsController {
   }
 
   @Post('test')
-  async testConnection(
-    @Body() body: { openRouterKey?: string },
-  ) {
+  async testConnection(@Body() body: { openRouterKey?: string }) {
     return this.settingsService.testConnection(body.openRouterKey);
   }
 
@@ -63,6 +61,9 @@ export class SettingsController {
       privateKey?: string;
     },
   ) {
-    return this.settingsService.testGitHubConnection(body.appId, body.privateKey);
+    return this.settingsService.testGitHubConnection(
+      body.appId,
+      body.privateKey,
+    );
   }
 }

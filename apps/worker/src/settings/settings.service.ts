@@ -2,6 +2,7 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@mergemind/database';
 import { encrypt, decrypt } from './utils/crypto';
+import Redis from 'ioredis';
 
 @Injectable()
 export class SettingsService {
@@ -9,11 +10,15 @@ export class SettingsService {
   private readonly encryptionKey: string;
   private readonly maskedPlaceholder =
     'sk-or-v1-****************************************';
+  private readonly redis: Redis;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
   ) {
+    this.redis = new Redis(
+      this.configService.get<string>('REDIS_URL') || 'redis://localhost:6379',
+    );
     this.encryptionKey = this.configService.get<string>('ENCRYPTION_KEY') || '';
     if (!this.encryptionKey) {
       this.logger.error('ENCRYPTION_KEY environment variable is not defined!');
@@ -25,20 +30,29 @@ export class SettingsService {
    * @param decrypted If true, returns the decrypted API key. Otherwise returns masked version.
    */
   async getSettings(decrypted = false) {
-    let settings = await this.prisma.aiSettings.findFirst();
+    let settingsStr = await this.redis.get('ai:settings:raw');
+    let settings: any = null;
 
-    if (!settings) {
-      this.logger.log('No AI settings found. Creating default configuration.');
-      settings = await this.prisma.aiSettings.create({
-        data: {
-          defaultModel: 'deepseek/deepseek-v4-flash:free',
-          fallbackModel: 'arcee-ai/trinity-large-thinking:free',
-          isFallbackEnabled: true,
-          temperature: 0.1,
-          maxTokens: 30000,
-          bypassSignature: true,
-        },
-      });
+    if (settingsStr) {
+      settings = JSON.parse(settingsStr);
+    } else {
+      settings = await this.prisma.aiSettings.findFirst();
+
+      if (!settings) {
+        this.logger.log('No AI settings found. Creating default configuration.');
+        settings = await this.prisma.aiSettings.create({
+          data: {
+            defaultModel: 'deepseek/deepseek-v4-flash:free',
+            fallbackModel: 'arcee-ai/trinity-large-thinking:free',
+            isFallbackEnabled: true,
+            temperature: 0.1,
+            maxTokens: 30000,
+            bypassSignature: true,
+          },
+        });
+      }
+      
+      await this.redis.set('ai:settings:raw', JSON.stringify(settings), 'EX', 300);
     }
 
     const response = { ...settings };
@@ -117,6 +131,8 @@ export class SettingsService {
         },
       });
     }
+
+    await this.redis.del('ai:settings:raw');
 
     // Return settings with masked key for security
     const response = { ...result };
@@ -232,7 +248,17 @@ export class SettingsService {
    * @param decrypted If true, returns decrypted secrets. Otherwise, returns masked placeholders.
    */
   async getGitHubSettings(decrypted = false) {
-    const settings = await this.prisma.gitHubSettings.findFirst();
+    let settingsStr = await this.redis.get('github:settings:raw');
+    let settings: any = null;
+
+    if (settingsStr) {
+      settings = JSON.parse(settingsStr);
+    } else {
+      settings = await this.prisma.gitHubSettings.findFirst();
+      if (settings) {
+        await this.redis.set('github:settings:raw', JSON.stringify(settings), 'EX', 300);
+      }
+    }
 
     if (!settings) {
       return {
@@ -338,6 +364,8 @@ export class SettingsService {
       });
     }
 
+    await this.redis.del('github:settings:raw');
+
     // Mask output before returning
     const response: any = { ...result };
     if (result.privateKey) response.privateKey = this.githubMasked;
@@ -382,7 +410,9 @@ export class SettingsService {
       if (!cleanedKey.includes('-----BEGIN')) {
         try {
           cleanedKey = Buffer.from(cleanedKey, 'base64').toString('utf8');
-        } catch (err: any) {}
+        } catch {
+          /* ignore */
+        }
       }
       cleanedKey = cleanedKey.replace(/\\n/g, '\n');
 

@@ -13,15 +13,15 @@ export function encrypt(text: string, secretKey: string): string {
   if (!secretKey) {
     throw new Error('Encryption key must be specified');
   }
-  
+
   // Hash the key using sha256 to ensure it is exactly 32 bytes (256 bits)
   const key = crypto.createHash('sha256').update(String(secretKey)).digest();
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-  
+
   let encrypted = cipher.update(text, 'utf8', 'hex');
   encrypted += cipher.final('hex');
-  
+
   return `${iv.toString('hex')}:${encrypted}`;
 }
 
@@ -39,17 +39,19 @@ export function decrypt(encryptedText: string, secretKey: string): string {
 
   const parts = encryptedText.split(':');
   if (parts.length !== 2) {
-    throw new Error('Malformed encrypted text format. Expected "iv:ciphertext"');
+    throw new Error(
+      'Malformed encrypted text format. Expected "iv:ciphertext"',
+    );
   }
 
   const iv = Buffer.from(parts.shift()!, 'hex');
   const encrypted = Buffer.from(parts.join(':'), 'hex');
   const key = crypto.createHash('sha256').update(String(secretKey)).digest();
-  
+
   const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-  
-  let decrypted = decipher.update(encrypted, undefined as any, 'utf8');
+
+  let decrypted = decipher.update(encrypted, undefined, 'utf8');
   decrypted += decipher.final('utf8');
-  
+
   return decrypted;
 }

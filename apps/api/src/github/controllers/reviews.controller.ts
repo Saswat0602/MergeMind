@@ -1,8 +1,24 @@
-import { Controller, Get, Post, Body, Param, Query, NotFoundException, BadRequestException, Logger, UseGuards } from '@nestjs/common';
-import { PrismaService } from '@mergemind/database';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+  UseGuards,
+} from '@nestjs/common';
 import { GithubService } from '../services/github.service';
 import { ApiKeyGuard } from '../../common/guards/api-key.guard';
 import { ApplyFixDto } from '../dto/apply-fix.dto';
+import { PullRequestRepository } from '../../repositories/pull-request.repository';
+import { RepositoryRepository } from '../../repositories/repository.repository';
+import { ReviewResultRepository } from '../../repositories/review-result.repository';
+import { AiUsageLogRepository } from '../../repositories/ai-usage-log.repository';
+import { RepositoryRuleRepository } from '../../repositories/repository-rule.repository';
+import { JobRepository } from '../../repositories/job.repository';
 
 @UseGuards(ApiKeyGuard)
 @Controller('dashboard')
@@ -10,58 +26,35 @@ export class ReviewsController {
   private readonly logger = new Logger(ReviewsController.name);
 
   constructor(
-    private readonly prisma: PrismaService,
     private readonly githubService: GithubService,
+    private readonly pullRequestRepo: PullRequestRepository,
+    private readonly repositoryRepo: RepositoryRepository,
+    private readonly reviewResultRepo: ReviewResultRepository,
+    private readonly aiUsageLogRepo: AiUsageLogRepository,
+    private readonly repositoryRuleRepo: RepositoryRuleRepository,
+    private readonly jobRepo: JobRepository,
   ) {}
 
   @Get('stats')
   async getStats() {
-    const totalPrs = await this.prisma.pullRequest.count();
-    const activeRepositories = await this.prisma.repository.count({
-      where: { isActive: true },
-    });
+    const totalPrs = await this.pullRequestRepo.countTotal();
+    const activeRepositories = await this.repositoryRepo.countActive();
+    const comments = await this.reviewResultRepo.countCommentsBySeverity();
 
-    // Aggregate comments count by severity
-    const comments = await this.prisma.reviewComment.groupBy({
-      by: ['severity'],
-      _count: {
-        _all: true,
-      },
-    });
+    const highSeverityCount =
+      comments.find((c) => c.severity === 'HIGH')?._count._all || 0;
+    const mediumSeverityCount =
+      comments.find((c) => c.severity === 'MEDIUM')?._count._all || 0;
+    const lowSeverityCount =
+      comments.find((c) => c.severity === 'LOW')?._count._all || 0;
 
-    const highSeverityCount = comments.find(c => c.severity === 'HIGH')?._count._all || 0;
-    const mediumSeverityCount = comments.find(c => c.severity === 'MEDIUM')?._count._all || 0;
-    const lowSeverityCount = comments.find(c => c.severity === 'LOW')?._count._all || 0;
+    const usage = await this.aiUsageLogRepo.aggregateUsage();
 
-    // Aggregate tokens and cost
-    const usage = await this.prisma.aiUsageLog.aggregate({
-      _sum: {
-        totalTokens: true,
-        cost: true,
-      },
-    });
-
-    // Past 7 days daily metrics
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const dailyUsage =
+      await this.aiUsageLogRepo.getDailyUsageSince(sevenDaysAgo);
 
-    const dailyUsage = await this.prisma.aiUsageLog.findMany({
-      where: {
-        createdAt: {
-          gte: sevenDaysAgo,
-        },
-      },
-      select: {
-        createdAt: true,
-        totalTokens: true,
-        cost: true,
-      },
-      orderBy: {
-        createdAt: 'asc',
-      },
-    });
-
-    // Group by date string (YYYY-MM-DD)
     const dailyMap: { [date: string]: { tokens: number; cost: number } } = {};
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
@@ -98,38 +91,11 @@ export class ReviewsController {
 
   @Get('usage')
   async getUsage() {
-    const logs = await this.prisma.aiUsageLog.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        reviewResult: {
-          include: {
-            pullRequest: {
-              include: {
-                repository: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    const totalUsage = await this.prisma.aiUsageLog.aggregate({
-      _sum: {
-        totalTokens: true,
-        cost: true,
-        promptTokens: true,
-        completionTokens: true,
-      },
-      _avg: {
-        latencyMs: true,
-      },
-      _count: {
-        id: true,
-      },
-    });
+    const logs = await this.aiUsageLogRepo.getUsageLogsWithDetails();
+    const totalUsage = await this.aiUsageLogRepo.aggregateUsage();
 
     return {
-      logs: logs.map(log => ({
+      logs: logs.map((log) => ({
         id: log.id,
         modelName: log.modelName,
         promptTokens: log.promptTokens,
@@ -139,10 +105,18 @@ export class ReviewsController {
         cost: log.cost || 0.0,
         createdAt: log.createdAt,
         actionDescription: log.actionDescription || 'Pull Request Review Audit',
-        repositoryName: log.reviewResult?.pullRequest?.repository?.fullName || 
-          (log.actionDescription?.includes('Handshake') ? 'System Connection' : 'N/A'),
-        prTitle: log.reviewResult?.pullRequest?.title || 
-          (log.actionDescription ? log.actionDescription.replace('Push Commit Audit: ', '').replace(/"/g, '') : 'N/A'),
+        repositoryName:
+          log.reviewResult?.pullRequest?.repository?.fullName ||
+          (log.actionDescription?.includes('Handshake')
+            ? 'System Connection'
+            : 'N/A'),
+        prTitle:
+          log.reviewResult?.pullRequest?.title ||
+          (log.actionDescription
+            ? log.actionDescription
+                .replace('Push Commit Audit: ', '')
+                .replace(/"/g, '')
+            : 'N/A'),
         prNumber: log.reviewResult?.pullRequest?.number || 0,
       })),
       summary: {
@@ -157,34 +131,15 @@ export class ReviewsController {
   }
 
   @Get('prs')
-  async getPRs(
-    @Query('page') page = '1',
-    @Query('limit') limit = '50',
-  ) {
+  async getPRs(@Query('page') page = '1', @Query('limit') limit = '50') {
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 50;
     const skip = (pageNum - 1) * limitNum;
 
-    const prs = await this.prisma.pullRequest.findMany({
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take: limitNum,
-      include: {
-        repository: true,
-        reviews: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
-        jobs: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
-      },
-    });
+    const prs = await this.pullRequestRepo.getPaginatedPRs(skip, limitNum);
+    const total = await this.pullRequestRepo.countTotal();
 
-    const total = await this.prisma.pullRequest.count();
-
-    const formattedPrs = prs.map(pr => {
+    const formattedPrs = prs.map((pr) => {
       const latestReview = pr.reviews[0];
       const latestJob = pr.jobs[0];
 
@@ -211,33 +166,16 @@ export class ReviewsController {
         page: pageNum,
         limit: limitNum,
         pages: Math.ceil(total / limitNum),
-      }
+      },
     };
   }
 
   @Get('prs/:id')
   async getPRDetails(@Param('id') id: string) {
-    const pr = await this.prisma.pullRequest.findUnique({
-      where: { id },
-      include: {
-        repository: true,
-        reviews: {
-          orderBy: { createdAt: 'desc' },
-          include: {
-            comments: true,
-            usageLogs: true,
-          },
-        },
-        jobs: {
-          orderBy: { createdAt: 'desc' },
-        },
-      },
-    });
-
+    const pr = await this.pullRequestRepo.getPRDetails(id);
     if (!pr) {
       throw new NotFoundException(`PR with ID ${id} not found`);
     }
-
     return pr;
   }
 
@@ -246,8 +184,6 @@ export class ReviewsController {
     @Body()
     body: ApplyFixDto,
   ) {
-
-    // Syntax validation warning check for sandbox code edits (non-blocking)
     const fileExtension = body.filePath.split('.').pop()?.toLowerCase();
     if (['js', 'ts', 'jsx', 'tsx'].includes(fileExtension || '')) {
       try {
@@ -256,24 +192,31 @@ export class ReviewsController {
           body.filePath,
           body.suggestion,
           ts.ScriptTarget.Latest,
-          true
+          true,
         );
-        const diagnostics = (sourceFile as any).parseDiagnostics || [];
+        const diagnostics = sourceFile.parseDiagnostics || [];
         if (diagnostics.length > 0) {
           const firstError = diagnostics[0];
-          const message = typeof firstError.messageText === 'string' 
-            ? firstError.messageText 
-            : firstError.messageText.messageText || 'Unknown syntax error';
-          this.logger.warn(`Sandbox compilation warning for ${body.filePath}: ${message}`);
+          const message =
+            typeof firstError.messageText === 'string'
+              ? firstError.messageText
+              : firstError.messageText.messageText || 'Unknown syntax error';
+          this.logger.warn(
+            `Sandbox compilation warning for ${body.filePath}: ${message}`,
+          );
         }
       } catch (err: any) {
-        this.logger.warn(`Failed to parse syntax for ${body.filePath}: ${err.message}`);
+        this.logger.warn(
+          `Failed to parse syntax for ${body.filePath}: ${err.message}`,
+        );
       }
     } else if (fileExtension === 'json') {
       try {
         JSON.parse(body.suggestion);
       } catch (jsonErr: any) {
-        throw new BadRequestException(`JSON syntax validation failed: ${jsonErr.message}`);
+        throw new BadRequestException(
+          `JSON syntax validation failed: ${jsonErr.message}`,
+        );
       }
     }
 
@@ -282,80 +225,68 @@ export class ReviewsController {
         body.pullRequestId,
         body.filePath,
         body.suggestion,
-        body.lineNumber,
+        body.startLine,
+        body.endLine,
       );
 
       if (body.commentId) {
-        await this.prisma.reviewComment.update({
-          where: { id: body.commentId },
-          data: { isApplied: true },
-        });
+        await this.reviewResultRepo.setCommentApplied(body.commentId);
       }
 
       return result;
     } catch (err: any) {
-      throw new BadRequestException(`Failed to apply suggested commit patch: ${err.message}`);
+      throw new BadRequestException(
+        `Failed to apply suggested commit patch: ${err.message}`,
+      );
     }
   }
 
   @Get('repositories')
   async getRepositories() {
-    await this.githubService.syncInstallationRepositories();
-    return this.prisma.repository.findMany({
-      where: { isActive: true },
-      orderBy: { fullName: 'asc' },
-    });
+    // Note: Live GitHub sync is removed from here for performance! (Phase 4 requirement)
+    return this.repositoryRepo.getActiveRepositories();
   }
 
   @Get('repositories/:repoId/rules')
   async getRules(@Param('repoId') repoId: string) {
-    const repository = await this.prisma.repository.findFirst({
-      where: {
-        OR: [
-          { id: repoId },
-          { fullName: repoId },
-          { name: repoId },
-        ],
-      },
-    });
+    const repository = await this.repositoryRepo.findRepoByIdOrName(repoId);
 
     if (!repository) {
       throw new NotFoundException(`Repository not found for: ${repoId}`);
     }
 
-    let rules = await this.prisma.repositoryRule.findMany({
-      where: { repositoryId: repository.id },
-      orderBy: { createdAt: 'asc' },
-    });
+    let rules = await this.repositoryRuleRepo.findByRepo(repository.id);
 
-    // Dynamic default rules fallback: if no rules are configured in the DB yet,
-    // dynamically create and seed the 4 standard default rules!
     if (rules.length === 0) {
       const defaults = [
         {
           name: 'Strict Type Safety',
-          description: 'Audit TypeScript files to strictly prohibit raw "any" types or uncasted object references.',
+          description:
+            'Audit TypeScript files to strictly prohibit raw "any" types or uncasted object references.',
           pattern: 'any',
           type: 'AI',
           isEnabled: true,
         },
         {
           name: 'Security Shield',
-          description: 'Prohibit hardcoded API credentials, private key files, database passwords, or auth tokens.',
+          description:
+            'Prohibit hardcoded API credentials, private key files, database passwords, or auth tokens.',
           pattern: 'sk-|key-|token-|password',
           type: 'AI',
           isEnabled: true,
         },
         {
           name: 'Async Error Boundaries',
-          description: 'Ensure all asynchronous API operations, database queries, and async methods are enclosed in robust try-catch blocks.',
+          description:
+            'Ensure all asynchronous API operations, database queries, and async methods are enclosed in robust try-catch blocks.',
           pattern: 'async',
           type: 'AI',
           isEnabled: true,
         },
         {
           name: 'No Debug Logs in Production',
-          description: 'Avoid checkins of console.logs or temporary debug tracers in primary controller, router, or database files.',
+          description:
+            'Avoid checkins of console.logs or temporary debug tracers in primary controller, router, or database files.',
           pattern: 'console.log',
           type: 'AI',
           isEnabled: false,
@@ -364,11 +295,9 @@ export class ReviewsController {
 
       const createdRules: any[] = [];
       for (const rule of defaults) {
-        const newRule = await this.prisma.repositoryRule.create({
-          data: {
-            repositoryId: repository.id,
-            ...rule,
-          },
+        const newRule = await this.repositoryRuleRepo.create({
+          repositoryId: repository.id,
+          ...rule,
         });
         createdRules.push(newRule);
       }
@@ -390,29 +319,19 @@ export class ReviewsController {
       isEnabled?: boolean;
     },
   ) {
-    const repository = await this.prisma.repository.findFirst({
-      where: {
-        OR: [
-          { id: repoId },
-          { fullName: repoId },
-          { name: repoId },
-        ],
-      },
-    });
+    const repository = await this.repositoryRepo.findRepoByIdOrName(repoId);
 
     if (!repository) {
       throw new NotFoundException(`Repository not found for: ${repoId}`);
     }
 
-    return this.prisma.repositoryRule.create({
-      data: {
-        repositoryId: repository.id,
-        name: body.name,
-        description: body.description,
-        pattern: body.pattern || '',
-        type: body.type || 'AI',
-        isEnabled: body.isEnabled ?? true,
-      },
+    return this.repositoryRuleRepo.create({
+      repositoryId: repository.id,
+      name: body.name,
+      description: body.description,
+      pattern: body.pattern || '',
+      type: body.type || 'AI',
+      isEnabled: body.isEnabled ?? true,
     });
   }
 
@@ -428,24 +347,17 @@ export class ReviewsController {
       isEnabled?: boolean;
     },
   ) {
-    return this.prisma.repositoryRule.update({
-      where: { id },
-      data: body,
-    });
+    return this.repositoryRuleRepo.update(id, body);
   }
 
   @Post('rules/:id/delete')
   async deleteRule(@Param('id') id: string) {
-    return this.prisma.repositoryRule.delete({
-      where: { id },
-    });
+    return this.repositoryRuleRepo.delete(id);
   }
 
   @Get('jobs/:id/status')
   async getJobStatus(@Param('id') id: string) {
-    const job = await this.prisma.analysisJob.findUnique({
-      where: { id },
-    });
+    const job = await this.jobRepo.getJobStatus(id);
     if (!job) {
       throw new NotFoundException(`Analysis job with ID ${id} not found`);
     }

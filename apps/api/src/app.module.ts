@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { PrismaService } from '@mergemind/database';
 import { GithubModule } from './github/github.module';
 import { SettingsModule } from './settings/settings.module';
+import { RepositoriesModule } from './repositories/repositories.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { SettingsModule } from './settings/settings.module';
     }),
     GithubModule,
     SettingsModule,
+    RepositoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
