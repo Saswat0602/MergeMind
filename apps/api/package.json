@@ -31,6 +31,8 @@
     "@octokit/auth-app": "^8.2.0",
     "@octokit/rest": "^22.0.1",
     "bullmq": "latest",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
     "dotenv": "latest",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"

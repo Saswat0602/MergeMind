@@ -1,7 +1,10 @@
-import { Controller, Get, Post, Body, Param, Query, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, NotFoundException, BadRequestException, Logger, UseGuards } from '@nestjs/common';
 import { PrismaService } from '@mergemind/database';
 import { GithubService } from '../services/github.service';
+import { ApiKeyGuard } from '../../common/guards/api-key.guard';
+import { ApplyFixDto } from '../dto/apply-fix.dto';
 
+@UseGuards(ApiKeyGuard)
 @Controller('dashboard')
 export class ReviewsController {
   private readonly logger = new Logger(ReviewsController.name);
@@ -241,17 +244,8 @@ export class ReviewsController {
   @Post('commit/apply-fix')
   async applyFix(
     @Body()
-    body: {
-      pullRequestId: string;
-      commentId?: string;
-      filePath: string;
-      suggestion: string;
-      lineNumber: number;
-    },
+    body: ApplyFixDto,
   ) {
-    if (!body.pullRequestId || !body.filePath || !body.suggestion || !body.lineNumber) {
-      throw new BadRequestException('Missing required fields for applying suggested commit patch');
-    }
 
     // Syntax validation warning check for sandbox code edits (non-blocking)
     const fileExtension = body.filePath.split('.').pop()?.toLowerCase();
