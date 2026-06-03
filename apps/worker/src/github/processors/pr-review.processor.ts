@@ -157,7 +157,7 @@ export class PrReviewProcessor extends WorkerHost {
         headSha,
         commitMessage,
         branchName,
-        repositoryId,
+        repositoryId: repositoryId!,
         analysisJobId,
         rules,
       });
