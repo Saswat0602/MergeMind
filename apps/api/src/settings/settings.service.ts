@@ -62,7 +62,7 @@ export class SettingsService {
       );
     }
 
-    const response = { ...settings } as import('@prisma/client').AiSettings;
+    const response = { ...settings };
 
     if (settings.openRouterKey) {
       if (decrypted) {
@@ -94,7 +94,9 @@ export class SettingsService {
     bypassSignature?: boolean;
   }) {
     const existing = await this.prisma.aiSettings.findFirst();
-    const updateData: Omit<typeof data, 'openRouterKey'> & { openRouterKey?: string | null } = {
+    const updateData: Omit<typeof data, 'openRouterKey'> & {
+      openRouterKey?: string | null;
+    } = {
       ...data,
     };
 
@@ -144,7 +146,7 @@ export class SettingsService {
     await this.redis.del('ai:settings:raw');
 
     // Return settings with masked key for security
-    const response = { ...result } as import('@prisma/client').AiSettings;
+    const response = { ...result };
     if (result.openRouterKey) {
       response.openRouterKey = this.maskedPlaceholder;
     } else {
@@ -288,7 +290,7 @@ export class SettingsService {
       };
     }
 
-    const response = { ...settings } as import('@prisma/client').GitHubSettings;
+    const response = { ...settings };
 
     if (settings.privateKey) {
       response.privateKey = decrypted
@@ -328,7 +330,10 @@ export class SettingsService {
     clientSecret?: string;
   }) {
     const existing = await this.prisma.gitHubSettings.findFirst();
-    const updateData: Omit<typeof data, 'privateKey' | 'webhookSecret' | 'clientSecret'> & {
+    const updateData: Omit<
+      typeof data,
+      'privateKey' | 'webhookSecret' | 'clientSecret'
+    > & {
       privateKey?: string | null;
       webhookSecret?: string | null;
       clientSecret?: string | null;
@@ -389,7 +394,7 @@ export class SettingsService {
     await this.redis.del('github:settings:raw');
 
     // Mask output before returning
-    const response = { ...result } as import('@prisma/client').GitHubSettings;
+    const response = { ...result };
     if (result.privateKey) response.privateKey = this.githubMasked;
     if (result.webhookSecret) response.webhookSecret = this.githubMasked;
     if (result.clientSecret) response.clientSecret = this.githubMasked;

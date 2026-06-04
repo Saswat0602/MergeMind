@@ -20,8 +20,8 @@ export class EventBroadcasterService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  onModuleDestroy() {
-    this.redis.quit();
+  async onModuleDestroy() {
+    await this.redis.quit();
   }
 
   broadcastJobUpdate(
