@@ -10,7 +10,11 @@ export class ResponseParserAgent {
 
   async parse(
     text: string | string[],
-    contextForRetry?: { settings: any; systemPrompt: string; userPrompt: string },
+    contextForRetry?: {
+      settings: any;
+      systemPrompt: string;
+      userPrompt: string;
+    },
     retryCount = 0,
   ): Promise<AiReviewResponse> {
     if (Array.isArray(text)) {
@@ -31,7 +35,11 @@ export class ResponseParserAgent {
 
   private async parseSingle(
     text: string,
-    contextForRetry?: { settings: any; systemPrompt: string; userPrompt: string },
+    contextForRetry?: {
+      settings: any;
+      systemPrompt: string;
+      userPrompt: string;
+    },
     retryCount = 0,
   ): Promise<AiReviewResponse> {
     let cleanText = text.trim();
@@ -78,8 +86,10 @@ export class ResponseParserAgent {
         }
       } catch (repairError: any) {
         if (contextForRetry && retryCount < 2) {
-          this.logger.warn(`Repair failed. Triggering Self-Correction ReAct Loop (Attempt ${retryCount + 1}/2)`);
-          
+          this.logger.warn(
+            `Repair failed. Triggering Self-Correction ReAct Loop (Attempt ${retryCount + 1}/2)`,
+          );
+
           const correctionPrompt = `
 You previously returned a response that could not be parsed as valid JSON.
 The JSON parser threw the following error: ${firstError.message}
@@ -90,7 +100,7 @@ ${text}
 
 Please FIX the syntax errors and return strictly valid JSON matching the schema. DO NOT wrap the output in markdown codeblocks. Return ONLY the raw JSON object.
           `;
-          
+
           const llmResult = await this.llmCaller.execute({
             settings: contextForRetry.settings,
             systemPrompt: contextForRetry.systemPrompt,
@@ -98,9 +108,11 @@ Please FIX the syntax errors and return strictly valid JSON matching the schema.
           });
 
           return this.parseSingle(
-            llmResult.isConsensus ? (llmResult as any).responses[0] : (llmResult as any).responseText,
+            llmResult.isConsensus
+              ? (llmResult as any).responses[0]
+              : (llmResult as any).responseText,
             contextForRetry,
-            retryCount + 1
+            retryCount + 1,
           );
         } else {
           throw new Error(

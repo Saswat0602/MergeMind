@@ -25,10 +25,12 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
         typeof exceptionResponse === 'object' &&
         exceptionResponse !== null
       ) {
-        message =
-          (exceptionResponse as any).message ||
-          (exceptionResponse as any).error ||
-          message;
+        const errResp = exceptionResponse as Record<string, unknown>;
+        if (typeof errResp.message === 'string') {
+          message = errResp.message;
+        } else if (typeof errResp.error === 'string') {
+          message = errResp.error;
+        }
       }
     } else if (exception instanceof Error) {
       message = exception.message;

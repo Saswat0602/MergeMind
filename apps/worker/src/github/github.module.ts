@@ -18,6 +18,13 @@ import { PipelineModule } from '../pipeline/pipeline.module';
     }),
   ],
   controllers: [],
-  providers: [GithubService, GithubCheckRunService, EventBroadcasterService, ScrubberService, PrReviewProcessor, PrismaService],
+  providers: [
+    GithubService,
+    GithubCheckRunService,
+    EventBroadcasterService,
+    ScrubberService,
+    PrReviewProcessor,
+    PrismaService,
+  ],
 })
 export class GithubModule {}

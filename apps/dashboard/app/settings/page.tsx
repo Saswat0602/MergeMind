@@ -78,8 +78,6 @@ export default function SettingsPage() {
             setGitHubClientId={ghHook.setGitHubClientId}
             gitHubClientSecret={ghHook.gitHubClientSecret}
             setGitHubClientSecret={ghHook.setGitHubClientSecret}
-            showGitHubPrivateKey={ghHook.showGitHubPrivateKey}
-            setShowGitHubPrivateKey={ghHook.setShowGitHubPrivateKey}
             showGitHubWebhookSecret={ghHook.showGitHubWebhookSecret}
             setShowGitHubWebhookSecret={ghHook.setShowGitHubWebhookSecret}
             showGitHubClientSecret={ghHook.showGitHubClientSecret}

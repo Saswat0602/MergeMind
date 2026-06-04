@@ -8,7 +8,7 @@ import { GlobalHttpExceptionFilter } from './common/filters/global-exception.fil
 import { GlobalResponseInterceptor } from './common/interceptors/global-response.interceptor';
 
 // Global polyfill to allow JSON serialization of BigInt values seamlessly in NestJS controllers
-(BigInt.prototype as any).toJSON = function () {
+(BigInt.prototype as unknown as { toJSON: () => number }).toJSON = function () {
   return Number(this);
 };
 
@@ -25,4 +25,7 @@ async function bootstrap() {
 
   await app.listen(process.env.API_PORT ?? 3001);
 }
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Failed to start application:', err);
+  process.exit(1);
+});

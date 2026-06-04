@@ -12,11 +12,16 @@ export class RepositoryRuleRepository {
     });
   }
 
-  async create(data: any) {
+  async create(
+    data: import('@prisma/client').Prisma.RepositoryRuleUncheckedCreateInput,
+  ) {
     return this.prisma.repositoryRule.create({ data });
   }
 
-  async update(id: string, data: any) {
+  async update(
+    id: string,
+    data: import('@prisma/client').Prisma.RepositoryRuleUpdateInput,
+  ) {
     return this.prisma.repositoryRule.update({ where: { id }, data });
   }
 

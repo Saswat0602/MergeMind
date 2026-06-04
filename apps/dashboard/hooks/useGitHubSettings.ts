@@ -61,7 +61,7 @@ export function useGitHubSettings() {
         setTestGitHubResult('FAILED');
         setTestGitHubErrorMessage(data.message || 'Handshake rejected by GitHub App Endpoint.');
       }
-    } catch (err) {
+    } catch {
       setTestGitHubResult('FAILED');
       setTestGitHubErrorMessage('Network error: Failed to reach backend handshake API.');
     } finally {
@@ -103,7 +103,7 @@ export function useGitHubSettings() {
         const data = await res.json();
         setSaveGitHubStatus(`Failed: ${data.message || 'Unknown server error'}`);
       }
-    } catch (err) {
+    } catch {
       setSaveGitHubStatus('Network error! Failed to store configurations.');
     } finally {
       setSavingGitHub(false);

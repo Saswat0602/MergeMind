@@ -29,7 +29,7 @@ export function Select({ value, onValueChange, placeholder, children }: SelectPr
         if (React.isValidElement(child)) {
           return React.cloneElement(child, {
             value, onValueChange, isOpen, setIsOpen, placeholder,
-          } as any);
+          } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
         }
         return child;
       })}
@@ -46,7 +46,7 @@ interface SelectTriggerProps {
   children?: React.ReactNode;
 }
 
-export function SelectTrigger({ className = '', value, isOpen, setIsOpen, placeholder, children }: SelectTriggerProps) {
+export function SelectTrigger({ className = '', isOpen, setIsOpen, placeholder, children }: SelectTriggerProps) {
   return (
     <button
       type="button"
@@ -97,7 +97,7 @@ export function SelectContent({ isOpen, value, onValueChange, setIsOpen, childre
         if (React.isValidElement(child)) {
           return React.cloneElement(child, {
             currentValue: value, onValueChange, setIsOpen,
-          } as any);
+          } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
         }
         return child;
       })}

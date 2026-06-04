@@ -31,10 +31,10 @@ export class SettingsService {
    */
   async getSettings(decrypted = false) {
     const settingsStr = await this.redis.get('ai:settings:raw');
-    let settings: any = null;
+    let settings: import('@prisma/client').AiSettings | null = null;
 
     if (settingsStr) {
-      settings = JSON.parse(settingsStr);
+      settings = JSON.parse(settingsStr) as import('@prisma/client').AiSettings;
     } else {
       settings = await this.prisma.aiSettings.findFirst();
 
@@ -62,7 +62,7 @@ export class SettingsService {
       );
     }
 
-    const response = { ...settings };
+    const response = { ...settings } as import('@prisma/client').AiSettings;
 
     if (settings.openRouterKey) {
       if (decrypted) {
@@ -94,7 +94,9 @@ export class SettingsService {
     bypassSignature?: boolean;
   }) {
     const existing = await this.prisma.aiSettings.findFirst();
-    const updateData: any = { ...data };
+    const updateData: Omit<typeof data, 'openRouterKey'> & { openRouterKey?: string | null } = {
+      ...data,
+    };
 
     // Handle OpenRouter API Key Encryption
     if (data.openRouterKey !== undefined) {
@@ -117,7 +119,7 @@ export class SettingsService {
       }
     }
 
-    let result;
+    let result: import('@prisma/client').AiSettings;
     if (existing) {
       result = await this.prisma.aiSettings.update({
         where: { id: existing.id },
@@ -142,7 +144,7 @@ export class SettingsService {
     await this.redis.del('ai:settings:raw');
 
     // Return settings with masked key for security
-    const response = { ...result };
+    const response = { ...result } as import('@prisma/client').AiSettings;
     if (result.openRouterKey) {
       response.openRouterKey = this.maskedPlaceholder;
     } else {
@@ -205,7 +207,9 @@ export class SettingsService {
         };
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as {
+        data?: { limit?: string | number };
+      };
 
       await this.prisma.aiUsageLog.create({
         data: {
@@ -256,10 +260,12 @@ export class SettingsService {
    */
   async getGitHubSettings(decrypted = false) {
     const settingsStr = await this.redis.get('github:settings:raw');
-    let settings: any = null;
+    let settings: import('@prisma/client').GitHubSettings | null = null;
 
     if (settingsStr) {
-      settings = JSON.parse(settingsStr);
+      settings = JSON.parse(
+        settingsStr,
+      ) as import('@prisma/client').GitHubSettings;
     } else {
       settings = await this.prisma.gitHubSettings.findFirst();
       if (settings) {
@@ -282,7 +288,7 @@ export class SettingsService {
       };
     }
 
-    const response: any = { ...settings };
+    const response = { ...settings } as import('@prisma/client').GitHubSettings;
 
     if (settings.privateKey) {
       response.privateKey = decrypted
@@ -322,7 +328,11 @@ export class SettingsService {
     clientSecret?: string;
   }) {
     const existing = await this.prisma.gitHubSettings.findFirst();
-    const updateData: any = { ...data };
+    const updateData: Omit<typeof data, 'privateKey' | 'webhookSecret' | 'clientSecret'> & {
+      privateKey?: string | null;
+      webhookSecret?: string | null;
+      clientSecret?: string | null;
+    } = { ...data };
 
     // Encrypt sensitive secrets if they have changed and are not masked placeholders
     if (data.privateKey !== undefined) {
@@ -364,7 +374,7 @@ export class SettingsService {
       }
     }
 
-    let result;
+    let result: import('@prisma/client').GitHubSettings;
     if (existing) {
       result = await this.prisma.gitHubSettings.update({
         where: { id: existing.id },
@@ -379,7 +389,7 @@ export class SettingsService {
     await this.redis.del('github:settings:raw');
 
     // Mask output before returning
-    const response: any = { ...result };
+    const response = { ...result } as import('@prisma/client').GitHubSettings;
     if (result.privateKey) response.privateKey = this.githubMasked;
     if (result.webhookSecret) response.webhookSecret = this.githubMasked;
     if (result.clientSecret) response.clientSecret = this.githubMasked;
@@ -422,7 +432,9 @@ export class SettingsService {
       if (!cleanedKey.includes('-----BEGIN')) {
         try {
           cleanedKey = Buffer.from(cleanedKey, 'base64').toString('utf8');
-        } catch (err) {}
+        } catch {
+          /* ignore */
+        }
       }
       cleanedKey = cleanedKey.replace(/\\n/g, '\n');
 
@@ -442,7 +454,7 @@ export class SettingsService {
       const { data } = await octokit.rest.apps.getAuthenticated();
 
       const appName = data?.name || 'MergeMind';
-      const ownerName = (data?.owner as any)?.login || 'Unknown';
+      const ownerName = (data?.owner as { login?: string })?.login || 'Unknown';
 
       return {
         success: true,

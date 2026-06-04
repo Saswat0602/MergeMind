@@ -95,18 +95,22 @@ export function chunkDiff(diffContent: string): {
         currentChunk = [];
         currentChunkLength = 0;
       }
-      
+
       // If a single file block is larger than the max (even after MAX_DIFF_LINE_COUNT check),
       // we have to omit it or it would break chunking.
       if (block.length > REVIEW_EXCLUSIONS.MAX_TOTAL_DIFF_CHARACTERS) {
         const filePath = getFilePathFromDiffBlock(block) || 'unknown file';
         skippedCount++;
-        skippedSummary.push(`${filePath} (exceeds single chunk character limit)`);
-        logger.warn(`Omitting file from review (exceeds single chunk char limit): ${filePath}`);
+        skippedSummary.push(
+          `${filePath} (exceeds single chunk character limit)`,
+        );
+        logger.warn(
+          `Omitting file from review (exceeds single chunk char limit): ${filePath}`,
+        );
         continue;
       }
     }
-    
+
     currentChunk.push(block);
     currentChunkLength += block.length;
   }

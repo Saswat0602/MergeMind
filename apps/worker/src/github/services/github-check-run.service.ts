@@ -20,7 +20,7 @@ export class GithubCheckRunService {
   ): Promise<number> {
     try {
       const octokit = await this.githubService.getAppOctokit(installationId);
-      
+
       const response = await octokit.rest.checks.create({
         owner,
         repo,
@@ -29,8 +29,10 @@ export class GithubCheckRunService {
         status: 'in_progress',
         started_at: new Date().toISOString(),
       });
-      
-      this.logger.log(`Created Check Run ${response.data.id} for ${owner}/${repo}@${commitSha}`);
+
+      this.logger.log(
+        `Created Check Run ${response.data.id} for ${owner}/${repo}@${commitSha}`,
+      );
       return response.data.id;
     } catch (error: any) {
       this.logger.error(`Failed to create Check Run: ${error.message}`);
@@ -46,13 +48,20 @@ export class GithubCheckRunService {
     owner: string,
     repo: string,
     checkRunId: number,
-    conclusion: 'success' | 'failure' | 'neutral' | 'cancelled' | 'skipped' | 'timed_out' | 'action_required',
+    conclusion:
+      | 'success'
+      | 'failure'
+      | 'neutral'
+      | 'cancelled'
+      | 'skipped'
+      | 'timed_out'
+      | 'action_required',
     title: string,
     summary: string,
   ): Promise<void> {
     try {
       const octokit = await this.githubService.getAppOctokit(installationId);
-      
+
       await octokit.rest.checks.update({
         owner,
         repo,
@@ -65,10 +74,14 @@ export class GithubCheckRunService {
           summary,
         },
       });
-      
-      this.logger.log(`Completed Check Run ${checkRunId} with conclusion: ${conclusion}`);
+
+      this.logger.log(
+        `Completed Check Run ${checkRunId} with conclusion: ${conclusion}`,
+      );
     } catch (error: any) {
-      this.logger.error(`Failed to complete Check Run ${checkRunId}: ${error.message}`);
+      this.logger.error(
+        `Failed to complete Check Run ${checkRunId}: ${error.message}`,
+      );
       throw error;
     }
   }

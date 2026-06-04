@@ -6,7 +6,6 @@ interface GitHubSettingsFormProps {
   gitHubWebhookSecret: string; setGitHubWebhookSecret: (val: string) => void;
   gitHubClientId: string; setGitHubClientId: (val: string) => void;
   gitHubClientSecret: string; setGitHubClientSecret: (val: string) => void;
-  showGitHubPrivateKey: boolean; setShowGitHubPrivateKey: (val: boolean) => void;
   showGitHubWebhookSecret: boolean; setShowGitHubWebhookSecret: (val: boolean) => void;
   showGitHubClientSecret: boolean; setShowGitHubClientSecret: (val: boolean) => void;
   testingGitHub: boolean;
@@ -96,7 +95,6 @@ export function GitHubSettingsForm({
   gitHubWebhookSecret, setGitHubWebhookSecret,
   gitHubClientId, setGitHubClientId,
   gitHubClientSecret, setGitHubClientSecret,
-  showGitHubPrivateKey, setShowGitHubPrivateKey,
   showGitHubWebhookSecret, setShowGitHubWebhookSecret,
   showGitHubClientSecret, setShowGitHubClientSecret,
   testingGitHub, testGitHubResult, testGitHubErrorMessage,

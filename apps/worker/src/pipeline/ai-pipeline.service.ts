@@ -62,7 +62,9 @@ export class AiPipelineService {
 
     let chunkIndex = 1;
     for (const chunk of cleanChunks) {
-      this.logger.log(`Processing Chunk ${chunkIndex}/${cleanChunks.length} for Job ${context.analysisJobId}`);
+      this.logger.log(
+        `Processing Chunk ${chunkIndex}/${cleanChunks.length} for Job ${context.analysisJobId}`,
+      );
 
       // Step 3: Build Prompt
       const { systemPrompt, userPrompt } = this.promptBuilder.build({
@@ -89,7 +91,7 @@ export class AiPipelineService {
           settings,
           systemPrompt,
           userPrompt,
-        }
+        },
       );
 
       // Step 6: Score and Filter
@@ -99,7 +101,10 @@ export class AiPipelineService {
       });
 
       allComments.push(...finalResponse.comments);
-      maxSeverityScore = Math.max(maxSeverityScore, finalResponse.severityScore ?? 0);
+      maxSeverityScore = Math.max(
+        maxSeverityScore,
+        finalResponse.severityScore ?? 0,
+      );
       combinedSummary += `\n\n--- Chunk ${chunkIndex} Analysis ---\n${finalResponse.summary}`;
 
       aggregateUsage.promptTokens += llmResult.promptTokens;
@@ -119,7 +124,7 @@ export class AiPipelineService {
 
     // Step 7: Persist
     const reviewResultId = await this.reviewPersister.persist({
-      response: aggregatedResponse as any,
+      response: aggregatedResponse,
       context,
       usage: aggregateUsage,
     });

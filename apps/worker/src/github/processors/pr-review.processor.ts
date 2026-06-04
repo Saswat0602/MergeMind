@@ -45,7 +45,13 @@ export class PrReviewProcessor extends WorkerHost {
       where: { id: analysisJobId },
       data: { status: 'PROCESSING', step: 'FETCHING_DIFF' },
     });
-    this.eventBroadcaster.broadcastJobUpdate(analysisJobId, 'PROCESSING', 'FETCHING_DIFF', undefined, pullRequestId);
+    this.eventBroadcaster.broadcastJobUpdate(
+      analysisJobId,
+      'PROCESSING',
+      'FETCHING_DIFF',
+      undefined,
+      pullRequestId,
+    );
 
     let installationId: bigint | number | undefined;
     let repositoryId: string | undefined;
@@ -88,7 +94,7 @@ export class PrReviewProcessor extends WorkerHost {
 
       try {
         checkRunId = await this.githubCheckRunService.createCheckRun(
-          installationId!,
+          installationId,
           owner,
           repoName,
           headSha || afterSha,
@@ -123,12 +129,28 @@ export class PrReviewProcessor extends WorkerHost {
           where: { id: analysisJobId },
           data: { status: 'COMPLETED', step: 'COMPLETED' },
         });
-        this.eventBroadcaster.broadcastJobUpdate(analysisJobId, 'COMPLETED', 'COMPLETED', undefined, pullRequestId);
+        this.eventBroadcaster.broadcastJobUpdate(
+          analysisJobId,
+          'COMPLETED',
+          'COMPLETED',
+          undefined,
+          pullRequestId,
+        );
 
         if (checkRunId) {
-          await this.githubCheckRunService.completeCheckRun(
-            installationId, owner, repoName, checkRunId, 'success', 'MergeMind Code Review', 'No diff content found or diff is empty.'
-          ).catch((e: any) => this.logger.warn(`Failed to complete check run: ${e.message}`));
+          await this.githubCheckRunService
+            .completeCheckRun(
+              installationId,
+              owner,
+              repoName,
+              checkRunId,
+              'success',
+              'MergeMind Code Review',
+              'No diff content found or diff is empty.',
+            )
+            .catch((e: any) =>
+              this.logger.warn(`Failed to complete check run: ${e.message}`),
+            );
         }
 
         return { success: true, message: 'Empty diff' };
@@ -138,7 +160,13 @@ export class PrReviewProcessor extends WorkerHost {
         where: { id: analysisJobId },
         data: { step: 'AI_ANALYSIS' },
       });
-      this.eventBroadcaster.broadcastJobUpdate(analysisJobId, 'PROCESSING', 'AI_ANALYSIS', undefined, pullRequestId);
+      this.eventBroadcaster.broadcastJobUpdate(
+        analysisJobId,
+        'PROCESSING',
+        'AI_ANALYSIS',
+        undefined,
+        pullRequestId,
+      );
 
       const rules = await this.prisma.repositoryRule.findMany({
         where: { repositoryId: repositoryId, isEnabled: true },
@@ -157,7 +185,7 @@ export class PrReviewProcessor extends WorkerHost {
         headSha,
         commitMessage,
         branchName,
-        repositoryId: repositoryId!,
+        repositoryId: repositoryId,
         analysisJobId,
         rules,
       });
@@ -167,12 +195,28 @@ export class PrReviewProcessor extends WorkerHost {
           where: { id: analysisJobId },
           data: { status: 'COMPLETED', step: 'COMPLETED' },
         });
-        this.eventBroadcaster.broadcastJobUpdate(analysisJobId, 'COMPLETED', 'COMPLETED', undefined, pullRequestId);
+        this.eventBroadcaster.broadcastJobUpdate(
+          analysisJobId,
+          'COMPLETED',
+          'COMPLETED',
+          undefined,
+          pullRequestId,
+        );
 
         if (checkRunId) {
-          await this.githubCheckRunService.completeCheckRun(
-            installationId, owner, repoName, checkRunId, 'success', 'MergeMind Code Review', 'Empty clean diff after pre-processing.'
-          ).catch((e: any) => this.logger.warn(`Failed to complete check run: ${e.message}`));
+          await this.githubCheckRunService
+            .completeCheckRun(
+              installationId,
+              owner,
+              repoName,
+              checkRunId,
+              'success',
+              'MergeMind Code Review',
+              'Empty clean diff after pre-processing.',
+            )
+            .catch((e: any) =>
+              this.logger.warn(`Failed to complete check run: ${e.message}`),
+            );
         }
 
         return {
@@ -185,7 +229,13 @@ export class PrReviewProcessor extends WorkerHost {
         where: { id: analysisJobId },
         data: { step: 'POSTING' },
       });
-      this.eventBroadcaster.broadcastJobUpdate(analysisJobId, 'PROCESSING', 'POSTING', undefined, pullRequestId);
+      this.eventBroadcaster.broadcastJobUpdate(
+        analysisJobId,
+        'PROCESSING',
+        'POSTING',
+        undefined,
+        pullRequestId,
+      );
 
       // Retrieve the saved ReviewResult to post to GitHub
       const reviewResult = await this.prisma.reviewResult.findUnique({
@@ -263,18 +313,34 @@ export class PrReviewProcessor extends WorkerHost {
         where: { id: analysisJobId },
         data: { status: 'COMPLETED', step: 'COMPLETED' },
       });
-      this.eventBroadcaster.broadcastJobUpdate(analysisJobId, 'COMPLETED', 'COMPLETED', undefined, pullRequestId);
+      this.eventBroadcaster.broadcastJobUpdate(
+        analysisJobId,
+        'COMPLETED',
+        'COMPLETED',
+        undefined,
+        pullRequestId,
+      );
 
       if (checkRunId) {
         const severityScore = reviewResult.severityScore ?? 0;
         const conclusion = severityScore > 70 ? 'failure' : 'success';
-        const summary = isPushEvent 
-          ? `Analysis complete. Found ${highCount} High, ${mediumCount} Medium issues.` 
+        const summary = isPushEvent
+          ? `Analysis complete. Found ${highCount} High, ${mediumCount} Medium issues.`
           : `Score: ${severityScore}/100. Found ${highCount} High, ${mediumCount} Medium issues.`;
-          
-        await this.githubCheckRunService.completeCheckRun(
-          installationId, owner, repoName, checkRunId, conclusion, 'MergeMind Code Review', summary
-        ).catch((e: any) => this.logger.warn(`Failed to complete check run: ${e.message}`));
+
+        await this.githubCheckRunService
+          .completeCheckRun(
+            installationId,
+            owner,
+            repoName,
+            checkRunId,
+            conclusion,
+            'MergeMind Code Review',
+            summary,
+          )
+          .catch((e: any) =>
+            this.logger.warn(`Failed to complete check run: ${e.message}`),
+          );
       }
 
       this.logger.log(`Successfully completed analysis for job ${job.id}`);
@@ -290,15 +356,32 @@ export class PrReviewProcessor extends WorkerHost {
         .catch((err) =>
           this.logger.error(`Failed to update job error state: ${err.message}`),
         );
-      this.eventBroadcaster.broadcastJobUpdate(analysisJobId, 'FAILED', 'FAILED', error.message, pullRequestId);
+      this.eventBroadcaster.broadcastJobUpdate(
+        analysisJobId,
+        'FAILED',
+        'FAILED',
+        error.message,
+        pullRequestId,
+      );
 
-      // We need to resolve installationId, owner, repoName from context if it failed later, 
+      // We need to resolve installationId, owner, repoName from context if it failed later,
       // but they might not be defined if it failed early.
       try {
         const [ownerName, repositoryName] = repositoryFullname.split('/');
-        if (typeof checkRunId !== 'undefined' && installationId && ownerName && repositoryName) {
+        if (
+          typeof checkRunId !== 'undefined' &&
+          installationId &&
+          ownerName &&
+          repositoryName
+        ) {
           await this.githubCheckRunService.completeCheckRun(
-            installationId, ownerName, repositoryName, checkRunId, 'failure', 'MergeMind Code Review Failed', error.message
+            installationId,
+            ownerName,
+            repositoryName,
+            checkRunId,
+            'failure',
+            'MergeMind Code Review Failed',
+            error.message,
           );
         }
       } catch (e: any) {

@@ -17,7 +17,7 @@ export function useUsageStats() {
       const data = await res.json();
       setLogs(data.logs);
       setSummary(data.summary);
-    } catch (err: any) {
+    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       console.error('Could not fetch usage metrics from API:', err);
       setError(err.message || 'Failed to fetch usage metrics');
       setLogs([]);
@@ -29,6 +29,7 @@ export function useUsageStats() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUsageData();
   }, []);
 
@@ -42,6 +43,7 @@ export function useUsageStats() {
     summary,
     loading,
     refreshing,
+    error,
     handleRefresh,
   };
 }

@@ -23,7 +23,7 @@ export class GlobalResponseInterceptor<T> implements NestInterceptor<
     next: CallHandler,
   ): Observable<Response<T>> {
     return next.handle().pipe(
-      map((data) => {
+      map((data: unknown) => {
         // Avoid double-wrapping if the controller already returned this structure
         if (
           data &&
@@ -35,7 +35,7 @@ export class GlobalResponseInterceptor<T> implements NestInterceptor<
         }
         return {
           success: true,
-          data,
+          data: data as T,
         };
       }),
     );

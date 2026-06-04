@@ -57,7 +57,7 @@ export class GithubService {
     if (!privateKey.includes('-----BEGIN')) {
       try {
         privateKey = Buffer.from(privateKey, 'base64').toString('utf8');
-      } catch (err) {
+      } catch {
         // Fallback
       }
     }
@@ -279,8 +279,12 @@ export class GithubService {
 
     const lines = originalContent.split('\n');
     const targetEndLine = endLine || startLine;
-    
-    if (startLine < 1 || targetEndLine > lines.length || startLine > targetEndLine) {
+
+    if (
+      startLine < 1 ||
+      targetEndLine > lines.length ||
+      startLine > targetEndLine
+    ) {
       throw new Error(
         `Line range ${startLine}-${targetEndLine} is out of bounds for file ${filePath} (total lines: ${lines.length})`,
       );

@@ -46,7 +46,7 @@ export class ReviewsController {
     return this.sseService.getJobEvents$().pipe(
       map((event) => ({
         data: event,
-      } as MessageEvent))
+      })),
     );
   }
 
@@ -202,7 +202,20 @@ export class ReviewsController {
     const fileExtension = body.filePath.split('.').pop()?.toLowerCase();
     if (['js', 'ts', 'jsx', 'tsx'].includes(fileExtension || '')) {
       try {
-        const ts = require('typescript');
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const ts = require('typescript') as {
+          ScriptTarget: { Latest: number };
+          createSourceFile: (
+            fileName: string,
+            sourceText: string,
+            languageVersion: number,
+            setParentNodes?: boolean,
+          ) => {
+            parseDiagnostics?: Array<{
+              messageText: string | { messageText: string };
+            }>;
+          };
+        };
         const sourceFile = ts.createSourceFile(
           body.filePath,
           body.suggestion,
@@ -220,17 +233,17 @@ export class ReviewsController {
             `Sandbox compilation warning for ${body.filePath}: ${message}`,
           );
         }
-      } catch (err: any) {
+      } catch (err) {
         this.logger.warn(
-          `Failed to parse syntax for ${body.filePath}: ${err.message}`,
+          `Failed to parse syntax for ${body.filePath}: ${(err as Error).message}`,
         );
       }
     } else if (fileExtension === 'json') {
       try {
         JSON.parse(body.suggestion);
-      } catch (jsonErr: any) {
+      } catch (jsonErr) {
         throw new BadRequestException(
-          `JSON syntax validation failed: ${jsonErr.message}`,
+          `JSON syntax validation failed: ${(jsonErr as Error).message}`,
         );
       }
     }
@@ -249,9 +262,9 @@ export class ReviewsController {
       }
 
       return result;
-    } catch (err: any) {
+    } catch (err) {
       throw new BadRequestException(
-        `Failed to apply suggested commit patch: ${err.message}`,
+        `Failed to apply suggested commit patch: ${(err as Error).message}`,
       );
     }
   }
@@ -308,7 +321,7 @@ export class ReviewsController {
         },
       ];
 
-      const createdRules: any[] = [];
+      const createdRules: import('@prisma/client').RepositoryRule[] = [];
       for (const rule of defaults) {
         const newRule = await this.repositoryRuleRepo.create({
           repositoryId: repository.id,

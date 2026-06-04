@@ -23,7 +23,7 @@ export function useRepositoryRules() {
         if (data.length > 0) {
           setSelectedRepoId(data[0].id);
         }
-      } catch (err: any) {
+      } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
         console.error('Error fetching repositories:', err);
         setError(err.message || 'Error loading repositories');
       } finally {
@@ -36,6 +36,7 @@ export function useRepositoryRules() {
   // Fetch rules whenever the selected repository changes
   useEffect(() => {
     if (!selectedRepoId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRules([]);
       return;
     }
@@ -48,7 +49,7 @@ export function useRepositoryRules() {
         if (!res.ok) throw new Error('Failed to load repository rules');
         const data = await res.json();
         setRules(data);
-      } catch (err: any) {
+      } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
         console.error('Error fetching rules:', err);
         setError(err.message || 'Error loading repository rules');
       } finally {
@@ -78,7 +79,7 @@ export function useRepositoryRules() {
       
       // Sync from server
       setRules(prev => prev.map(r => (r.id === ruleId ? updated : r)));
-    } catch (err: any) {
+    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       console.error('Error toggling rule:', err);
       setError(err.message || 'Failed to update rule state');
       // Rollback optimistic update
@@ -109,7 +110,7 @@ export function useRepositoryRules() {
       const newRule = await res.json();
       setRules(prev => [...prev, newRule]);
       return true;
-    } catch (err: any) {
+    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       console.error('Error creating custom rule:', err);
       setError(err.message || 'Failed to create new custom rule');
       return false;
@@ -128,7 +129,7 @@ export function useRepositoryRules() {
 
       if (!res.ok) throw new Error('Failed to delete repository rule');
       setRules(prev => prev.filter(r => r.id !== ruleId));
-    } catch (err: any) {
+    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       console.error('Error deleting rule:', err);
       setError(err.message || 'Failed to delete repository rule');
     }

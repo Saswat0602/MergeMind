@@ -30,7 +30,7 @@ export class SettingsService {
    * @param decrypted If true, returns the decrypted API key. Otherwise returns masked version.
    */
   async getSettings(decrypted = false) {
-    let settingsStr = await this.redis.get('ai:settings:raw');
+    const settingsStr = await this.redis.get('ai:settings:raw');
     let settings: any = null;
 
     if (settingsStr) {
@@ -39,7 +39,9 @@ export class SettingsService {
       settings = await this.prisma.aiSettings.findFirst();
 
       if (!settings) {
-        this.logger.log('No AI settings found. Creating default configuration.');
+        this.logger.log(
+          'No AI settings found. Creating default configuration.',
+        );
         settings = await this.prisma.aiSettings.create({
           data: {
             defaultModel: 'deepseek/deepseek-v4-flash:free',
@@ -51,8 +53,13 @@ export class SettingsService {
           },
         });
       }
-      
-      await this.redis.set('ai:settings:raw', JSON.stringify(settings), 'EX', 300);
+
+      await this.redis.set(
+        'ai:settings:raw',
+        JSON.stringify(settings),
+        'EX',
+        300,
+      );
     }
 
     const response = { ...settings };
@@ -248,7 +255,7 @@ export class SettingsService {
    * @param decrypted If true, returns decrypted secrets. Otherwise, returns masked placeholders.
    */
   async getGitHubSettings(decrypted = false) {
-    let settingsStr = await this.redis.get('github:settings:raw');
+    const settingsStr = await this.redis.get('github:settings:raw');
     let settings: any = null;
 
     if (settingsStr) {
@@ -256,7 +263,12 @@ export class SettingsService {
     } else {
       settings = await this.prisma.gitHubSettings.findFirst();
       if (settings) {
-        await this.redis.set('github:settings:raw', JSON.stringify(settings), 'EX', 300);
+        await this.redis.set(
+          'github:settings:raw',
+          JSON.stringify(settings),
+          'EX',
+          300,
+        );
       }
     }
 

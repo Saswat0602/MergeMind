@@ -1,4 +1,9 @@
-import { Injectable, OnModuleDestroy, OnModuleInit, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleDestroy,
+  OnModuleInit,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { Subject, Observable } from 'rxjs';
@@ -23,11 +28,16 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
     this.redisSubscriber = new Redis(redisUrl);
 
-    this.redisSubscriber.subscribe('job_updates', (err, count) => {
+    void this.redisSubscriber.subscribe('job_updates', (err, count) => {
       if (err) {
-        this.logger.error('Failed to subscribe to job_updates: %s', err.message);
+        this.logger.error(
+          'Failed to subscribe to job_updates: %s',
+          err.message,
+        );
       } else {
-        this.logger.log(`Subscribed successfully! This client is currently subscribed to ${count} channels.`);
+        this.logger.log(
+          `Subscribed successfully! This client is currently subscribed to ${String(count)} channels.`,
+        );
       }
     });
 
@@ -44,7 +54,7 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
   }
 
   onModuleDestroy() {
-    this.redisSubscriber.quit();
+    void this.redisSubscriber.quit();
   }
 
   getJobEvents$(): Observable<JobEvent> {

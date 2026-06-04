@@ -1,0 +1,188 @@
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/api/src/app.controller.spec.ts
+  5:1 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  8:3 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  17:3 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  18:5 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  19:7 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  19:7 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  19:40 @typescript-eslint/no-unsafe-member-access - Unsafe member access .toBe on a type that cannot be resolved.
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/api/src/common/filters/global-exception.filter.ts
+  28:9 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  29:38 @typescript-eslint/no-unsafe-member-access - Unsafe member access .message on an `any` value.
+  30:38 @typescript-eslint/no-unsafe-member-access - Unsafe member access .error on an `any` value.
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/api/src/common/guards/api-key.guard.ts
+  14:11 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  15:11 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  15:32 @typescript-eslint/no-unsafe-member-access - Unsafe member access .headers on an `any` value.
+  28:11 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  28:25 @typescript-eslint/no-unsafe-call - Unsafe call of an `any` typed value.
+  28:25 @typescript-eslint/no-unsafe-call - Unsafe call of an `any` typed value.
+  28:36 @typescript-eslint/no-unsafe-member-access - Unsafe member access .replace on an `any` value.
+  28:59 @typescript-eslint/no-unsafe-member-access - Unsafe member access .trim on an `any` value.
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/api/src/common/interceptors/global-response.interceptor.ts
+  38:11 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/api/src/github/controllers/reviews.controller.spec.ts
+  7:1 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  7:6 @typescript-eslint/no-unsafe-member-access - Unsafe member access .mock on a type that cannot be resolved.
+  8:1 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  8:6 @typescript-eslint/no-unsafe-member-access - Unsafe member access .mock on a type that cannot be resolved.
+  10:5 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an error typed value.
+  10:14 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  10:14 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  10:19 @typescript-eslint/no-unsafe-member-access - Unsafe member access .fn on a type that cannot be resolved.
+  10:24 @typescript-eslint/no-unsafe-member-access - Unsafe member access .mockImplementation on a type that cannot be resolved.
+  13:11 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an error typed value.
+  13:32 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  13:37 @typescript-eslint/no-unsafe-member-access - Unsafe member access .fn on a type that cannot be resolved.
+  19:1 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  19:6 @typescript-eslint/no-unsafe-member-access - Unsafe member access .mock on a type that cannot be resolved.
+  21:5 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an error typed value.
+  21:20 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  21:25 @typescript-eslint/no-unsafe-member-access - Unsafe member access .fn on a type that cannot be resolved.
+  25:1 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  31:5 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an error typed value.
+  31:23 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  31:23 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  32:8 @typescript-eslint/no-unsafe-member-access - Unsafe member access .fn on a type that cannot be resolved.
+  33:8 @typescript-eslint/no-unsafe-member-access - Unsafe member access .mockResolvedValue on a type that cannot be resolved.
+  36:3 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  49:3 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  50:5 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  51:13 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  51:13 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  58:9 @typescript-eslint/no-unsafe-member-access - Unsafe member access .rejects on a type that cannot be resolved.
+  61:5 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  62:13 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  62:13 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  69:9 @typescript-eslint/no-unsafe-member-access - Unsafe member access .rejects on a type that cannot be resolved.
+  72:5 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  80:7 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  80:7 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  80:22 @typescript-eslint/no-unsafe-member-access - Unsafe member access .toEqual on a type that cannot be resolved.
+  81:7 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  81:7 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  81:14 @typescript-eslint/unbound-method - A method that is not declared with `this: void` may cause unintentional scoping of `this` when separated from its object.
+Consider using an arrow function or explicitly `.bind()`ing the method to avoid calling the method with an unintended `this` value. 
+If a function does not access `this`, it can be annotated with `this: void`.
+  81:46 @typescript-eslint/no-unsafe-member-access - Unsafe member access .toHaveBeenCalledWith on a type that cannot be resolved.
+  89:5 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  97:7 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  97:7 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  97:22 @typescript-eslint/no-unsafe-member-access - Unsafe member access .toEqual on a type that cannot be resolved.
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/api/src/github/controllers/reviews.controller.ts
+  206:15 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  207:15 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  207:28 @typescript-eslint/no-unsafe-call - Unsafe call of an `any` typed value.
+  207:31 @typescript-eslint/no-unsafe-member-access - Unsafe member access .createSourceFile on an `any` value.
+  210:14 @typescript-eslint/no-unsafe-member-access - Unsafe member access .ScriptTarget on an `any` value.
+  213:15 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  213:40 @typescript-eslint/no-unsafe-member-access - Unsafe member access .parseDiagnostics on an `any` value.
+  214:25 @typescript-eslint/no-unsafe-member-access - Unsafe member access .length on an `any` value.
+  215:17 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  215:42 @typescript-eslint/no-unsafe-member-access - Unsafe member access [0] on an `any` value.
+  216:17 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  217:31 @typescript-eslint/no-unsafe-member-access - Unsafe member access .messageText on an `any` value.
+  218:28 @typescript-eslint/no-unsafe-member-access - Unsafe member access .messageText on an `any` value.
+  219:28 @typescript-eslint/no-unsafe-member-access - Unsafe member access .messageText on an `any` value.
+  226:63 @typescript-eslint/no-unsafe-member-access - Unsafe member access .message on an `any` value.
+  234:53 @typescript-eslint/no-unsafe-member-access - Unsafe member access .message on an `any` value.
+  255:56 @typescript-eslint/no-unsafe-member-access - Unsafe member access .message on an `any` value.
+  320:7 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of type `any[]` to a variable of type `{ name: string; id: string; type: string; createdAt: Date; updatedAt: Date; repositoryId: string; description: string | null; pattern: string | null; config: JsonValue; isEnabled: boolean; }[]`.
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/api/src/main.ts
+  11:27 @typescript-eslint/no-unsafe-member-access - Unsafe member access .toJSON on an `any` value.
+  28:1 @typescript-eslint/no-floating-promises - Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator.
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/api/src/repositories/repository-rule.repository.ts
+  16:48 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  20:63 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/api/src/settings/settings.controller.ts
+  12:5 @typescript-eslint/no-unsafe-return - Unsafe return of a value of type `Promise<any>`.
+  29:5 @typescript-eslint/no-unsafe-return - Unsafe return of a value of type `Promise<any>`.
+  39:5 @typescript-eslint/no-unsafe-return - Unsafe return of a value of type `Promise<any>`.
+  53:5 @typescript-eslint/no-unsafe-return - Unsafe return of a value of type `Promise<any>`.
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/api/src/settings/settings.service.ts
+  37:7 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  65:11 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  67:18 @typescript-eslint/no-unsafe-member-access - Unsafe member access .openRouterKey on an `any` value.
+  69:18 @typescript-eslint/no-unsafe-member-access - Unsafe member access .openRouterKey on an `any` value.
+  70:11 @typescript-eslint/no-unsafe-argument - Unsafe argument of type `any` assigned to a parameter of type `string`.
+  70:20 @typescript-eslint/no-unsafe-member-access - Unsafe member access .openRouterKey on an `any` value.
+  74:18 @typescript-eslint/no-unsafe-member-access - Unsafe member access .openRouterKey on an `any` value.
+  77:16 @typescript-eslint/no-unsafe-member-access - Unsafe member access .openRouterKey on an `any` value.
+  80:5 @typescript-eslint/no-unsafe-return - Unsafe return of a value of type `any`.
+  104:22 @typescript-eslint/no-unsafe-member-access - Unsafe member access .openRouterKey on an `any` value.
+  106:22 @typescript-eslint/no-unsafe-member-access - Unsafe member access .openRouterKey on an `any` value.
+  110:20 @typescript-eslint/no-unsafe-member-access - Unsafe member access .openRouterKey on an `any` value.
+  113:20 @typescript-eslint/no-unsafe-member-access - Unsafe member access .openRouterKey on an `any` value.
+  124:9 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  128:9 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  130:11 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  131:24 @typescript-eslint/no-unsafe-member-access - Unsafe member access .defaultModel on an `any` value.
+  132:11 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  133:24 @typescript-eslint/no-unsafe-member-access - Unsafe member access .fallbackModel on an `any` value.
+  134:11 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  134:41 @typescript-eslint/no-unsafe-member-access - Unsafe member access .isFallbackEnabled on an `any` value.
+  135:11 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  135:35 @typescript-eslint/no-unsafe-member-access - Unsafe member access .temperature on an `any` value.
+  136:11 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  136:33 @typescript-eslint/no-unsafe-member-access - Unsafe member access .maxTokens on an `any` value.
+  137:11 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  137:39 @typescript-eslint/no-unsafe-member-access - Unsafe member access .bypassSignature on an `any` value.
+  145:11 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  146:16 @typescript-eslint/no-unsafe-member-access - Unsafe member access .openRouterKey on an `any` value.
+  147:16 @typescript-eslint/no-unsafe-member-access - Unsafe member access .openRouterKey on an `any` value.
+  149:16 @typescript-eslint/no-unsafe-member-access - Unsafe member access .openRouterKey on an `any` value.
+  152:5 @typescript-eslint/no-unsafe-return - Unsafe return of a value of type `any`.
+  164:13 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  165:7 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  165:33 @typescript-eslint/no-unsafe-member-access - Unsafe member access .openRouterKey on an `any` value.
+  208:13 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  218:97 @typescript-eslint/no-unsafe-member-access - Unsafe member access .data on an `any` value.
+  224:82 @typescript-eslint/no-unsafe-member-access - Unsafe member access .data on an `any` value.
+  262:7 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  285:11 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  287:18 @typescript-eslint/no-unsafe-member-access - Unsafe member access .privateKey on an `any` value.
+  288:16 @typescript-eslint/no-unsafe-member-access - Unsafe member access .privateKey on an `any` value.
+  289:19 @typescript-eslint/no-unsafe-argument - Unsafe argument of type `any` assigned to a parameter of type `string`.
+  289:28 @typescript-eslint/no-unsafe-member-access - Unsafe member access .privateKey on an `any` value.
+  292:16 @typescript-eslint/no-unsafe-member-access - Unsafe member access .privateKey on an `any` value.
+  295:18 @typescript-eslint/no-unsafe-member-access - Unsafe member access .webhookSecret on an `any` value.
+  296:16 @typescript-eslint/no-unsafe-member-access - Unsafe member access .webhookSecret on an `any` value.
+  297:19 @typescript-eslint/no-unsafe-argument - Unsafe argument of type `any` assigned to a parameter of type `string`.
+  297:28 @typescript-eslint/no-unsafe-member-access - Unsafe member access .webhookSecret on an `any` value.
+  300:16 @typescript-eslint/no-unsafe-member-access - Unsafe member access .webhookSecret on an `any` value.
+  303:18 @typescript-eslint/no-unsafe-member-access - Unsafe member access .clientSecret on an `any` value.
+  304:16 @typescript-eslint/no-unsafe-member-access - Unsafe member access .clientSecret on an `any` value.
+  305:19 @typescript-eslint/no-unsafe-argument - Unsafe argument of type `any` assigned to a parameter of type `string`.
+  305:28 @typescript-eslint/no-unsafe-member-access - Unsafe member access .clientSecret on an `any` value.
+  308:16 @typescript-eslint/no-unsafe-member-access - Unsafe member access .clientSecret on an `any` value.
+  311:5 @typescript-eslint/no-unsafe-return - Unsafe return of a value of type `any`.
+  330:20 @typescript-eslint/no-unsafe-member-access - Unsafe member access .privateKey on an `any` value.
+  332:20 @typescript-eslint/no-unsafe-member-access - Unsafe member access .privateKey on an `any` value.
+  334:20 @typescript-eslint/no-unsafe-member-access - Unsafe member access .privateKey on an `any` value.
+  343:20 @typescript-eslint/no-unsafe-member-access - Unsafe member access .webhookSecret on an `any` value.
+  345:20 @typescript-eslint/no-unsafe-member-access - Unsafe member access .webhookSecret on an `any` value.
+  347:20 @typescript-eslint/no-unsafe-member-access - Unsafe member access .webhookSecret on an `any` value.
+  356:20 @typescript-eslint/no-unsafe-member-access - Unsafe member access .clientSecret on an `any` value.
+  358:20 @typescript-eslint/no-unsafe-member-access - Unsafe member access .clientSecret on an `any` value.
+  360:20 @typescript-eslint/no-unsafe-member-access - Unsafe member access .clientSecret on an `any` value.
+  371:9 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  375:9 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  382:11 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  383:16 @typescript-eslint/no-unsafe-member-access - Unsafe member access .privateKey on an `any` value.
+  383:37 @typescript-eslint/no-unsafe-member-access - Unsafe member access .privateKey on an `any` value.
+  384:16 @typescript-eslint/no-unsafe-member-access - Unsafe member access .webhookSecret on an `any` value.
+  384:40 @typescript-eslint/no-unsafe-member-access - Unsafe member access .webhookSecret on an `any` value.
+  385:16 @typescript-eslint/no-unsafe-member-access - Unsafe member access .clientSecret on an `any` value.
+  385:39 @typescript-eslint/no-unsafe-member-access - Unsafe member access .clientSecret on an `any` value.
+  387:5 @typescript-eslint/no-unsafe-return - Unsafe return of a value of type `any`.
+  402:13 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  403:23 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  403:41 @typescript-eslint/no-unsafe-member-access - Unsafe member access .appId on an `any` value.
+  405:9 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  405:32 @typescript-eslint/no-unsafe-member-access - Unsafe member access .privateKey on an `any` value.
+  447:13 @typescript-eslint/no-unsafe-assignment - Unsafe assignment of an `any` value.
+  447:47 @typescript-eslint/no-unsafe-member-access - Unsafe member access .login on an `any` value.
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/api/test/app.e2e-spec.ts
+  7:1 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  10:3 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.
+  19:3 @typescript-eslint/no-unsafe-call - Unsafe call of a type that could not be resolved.

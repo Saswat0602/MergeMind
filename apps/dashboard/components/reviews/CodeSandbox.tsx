@@ -9,7 +9,7 @@ function checkSyntax(code: string, filePath: string): string | null {
     try {
       JSON.parse(code);
       return null;
-    } catch (err: any) {
+    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       return `Invalid JSON structure - ${err.message}`;
     }
   }
@@ -128,7 +128,7 @@ export function CodeSandbox({
   const syntaxError = checkSyntax(currentCode, comment.filePath);
   const isPushed = comment.isApplied || applySuccessId === comment.id;
 
-  const handleEditorDidMount = (editor: any, monaco: any) => {
+  const handleEditorDidMount = (editor: any, monaco: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     monaco.editor.defineTheme('mergeMindDark', {
       base: 'vs-dark',
       inherit: true,

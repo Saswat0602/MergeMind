@@ -17,7 +17,7 @@ export class DiffPreprocessorAgent {
       );
     }
 
-    const cleanChunks = chunks.map(chunk => this.scrubber.scrub(chunk));
+    const cleanChunks = chunks.map((chunk) => this.scrubber.scrub(chunk));
 
     return { cleanChunks, skippedCount };
   }

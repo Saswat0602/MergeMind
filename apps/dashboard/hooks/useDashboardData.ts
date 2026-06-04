@@ -46,7 +46,7 @@ export function useDashboardData() {
           pages: 1
         });
       }
-    } catch (err: any) {
+    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       console.error('Could not connect to API server:', err);
       setError(err.message || 'Failed to load dashboard statistics');
       setStats(null);
@@ -59,6 +59,7 @@ export function useDashboardData() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData(currentPage);
   }, [currentPage]);
 

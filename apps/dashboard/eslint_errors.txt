@@ -1,0 +1,110 @@
+
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/dashboard/components/layout/SseToast.tsx
+   5:10  warning  'RefreshCw' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+  14:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/dashboard/components/layout/SseToast.tsx:14:7
+  12 |   useEffect(() => {
+  13 |     if (liveEvents.length > 0) {
+> 14 |       setLatestEvent(liveEvents[0]);
+     |       ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  15 |       setIsVisible(true);
+  16 |
+  17 |       // Hide toast after 5 seconds if completed or failed  react-hooks/set-state-in-effect
+  29:9   warning  'isProcessing' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/dashboard/components/reviews/CodeSandbox.tsx
+   12:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  131:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  131:54  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/dashboard/components/settings/GitHubSettingsForm.tsx
+  99:3   warning  'showGitHubPrivateKey' is defined but never used     @typescript-eslint/no-unused-vars
+  99:25  warning  'setShowGitHubPrivateKey' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/dashboard/components/ui/select.tsx
+   32:16  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   49:49  warning  'value' is defined but never used         @typescript-eslint/no-unused-vars
+  100:16  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/dashboard/hooks/useDashboardData.ts
+  49:19  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-explicit-any
+  62:5   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/dashboard/hooks/useDashboardData.ts:62:5
+  60 |
+  61 |   useEffect(() => {
+> 62 |     fetchData(currentPage);
+     |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+  63 |   }, [currentPage]);
+  64 |
+  65 |   const handleRefresh = () => {  react-hooks/set-state-in-effect
+
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/dashboard/hooks/useGitHubSettings.ts
+   64:14  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+  106:14  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/dashboard/hooks/useRepositoryRules.ts
+   26:21  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+   39:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/dashboard/hooks/useRepositoryRules.ts:39:7
+  37 |   useEffect(() => {
+  38 |     if (!selectedRepoId) {
+> 39 |       setRules([]);
+     |       ^^^^^^^^ Avoid calling setState() directly within an effect
+  40 |       return;
+  41 |     }
+  42 |  react-hooks/set-state-in-effect
+   51:21  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+   81:19  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+  112:19  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+  131:19  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/dashboard/hooks/useReviewDetail.ts
+   15:10  warning  'error' is assigned a value but never used                                                                         @typescript-eslint/no-unused-vars
+   26:19  error    Unexpected any. Specify a different type                                                                           @typescript-eslint/no-explicit-any
+   39:6   warning  React Hook useEffect has a missing dependency: 'fetchPRDetails'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   54:6   warning  React Hook useEffect has a missing dependency: 'fetchPRDetails'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  102:19  error    Unexpected any. Specify a different type                                                                           @typescript-eslint/no-explicit-any
+
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/dashboard/hooks/useUsageStats.ts
+  10:10  warning  'error' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+  20:19  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-explicit-any
+  32:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/saswatranjanmohanty/Desktop/personal projects/ai-projects/MergeMind/apps/dashboard/hooks/useUsageStats.ts:32:5
+  30 |
+  31 |   useEffect(() => {
+> 32 |     fetchUsageData();
+     |     ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  33 |   }, []);
+  34 |
+  35 |   const handleRefresh = () => {  react-hooks/set-state-in-effect
+
+✖ 29 problems (18 errors, 11 warnings)
+

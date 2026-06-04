@@ -1,4 +1,9 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
@@ -19,9 +24,15 @@ export class EventBroadcasterService implements OnModuleInit, OnModuleDestroy {
     this.redis.quit();
   }
 
-  broadcastJobUpdate(jobId: string, status: string, step: string, error?: string, pullRequestId?: string) {
+  broadcastJobUpdate(
+    jobId: string,
+    status: string,
+    step: string,
+    error?: string,
+    pullRequestId?: string,
+  ) {
     const payload = { jobId, status, step, error, pullRequestId };
-    this.redis.publish('job_updates', JSON.stringify(payload)).catch(err => {
+    this.redis.publish('job_updates', JSON.stringify(payload)).catch((err) => {
       this.logger.error(`Failed to broadcast job update: ${err.message}`);
     });
   }

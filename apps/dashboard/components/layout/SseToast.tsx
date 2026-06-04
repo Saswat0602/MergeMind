@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useLiveJobStatus, JobEvent } from '../../hooks/useLiveJobStatus';
-import { RefreshCw, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 export function SseToast() {
   const { liveEvents } = useLiveJobStatus();
@@ -11,6 +11,7 @@ export function SseToast() {
 
   useEffect(() => {
     if (liveEvents.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLatestEvent(liveEvents[0]);
       setIsVisible(true);
 
@@ -26,7 +27,7 @@ export function SseToast() {
 
   const isCompleted = latestEvent.status === 'COMPLETED';
   const isFailed = latestEvent.status === 'FAILED';
-  const isProcessing = latestEvent.status === 'PROCESSING';
+
 
   return (
     <div

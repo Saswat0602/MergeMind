@@ -23,7 +23,7 @@ export function useReviewDetail(id: string) {
       }
       const data = await res.json();
       setPr(data);
-    } catch (err: any) {
+    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       console.error('Could not fetch PR from API:', err);
       setError(err.message || 'Failed to fetch PR details');
       setPr(null);
@@ -47,6 +47,7 @@ export function useReviewDetail(id: string) {
     
     if (isRunning) {
       const interval = setInterval(() => {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         fetchPRDetails();
       }, 1500);
       return () => clearInterval(interval);
@@ -99,7 +100,7 @@ export function useReviewDetail(id: string) {
       }
 
       setApplySuccessId(commentId);
-    } catch (err: any) {
+    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       setApplyError(prev => ({ ...prev, [commentId]: err.message || 'Unexpected server rejection' }));
     } finally {
       setApplyingFixId(null);
@@ -128,6 +129,7 @@ export function useReviewDetail(id: string) {
     comments,
     usageLogs,
     filteredComments,
+    error,
     setActiveTab,
     setEditedSuggestions,
     handleApplyCommit,

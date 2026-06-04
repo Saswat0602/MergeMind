@@ -4,7 +4,7 @@ export enum Persona {
   GENERAL = 'GENERAL',
   SECURITY = 'SECURITY',
   PERFORMANCE = 'PERFORMANCE',
-  FRONTEND = 'FRONTEND'
+  FRONTEND = 'FRONTEND',
 }
 
 @Injectable()
@@ -19,11 +19,11 @@ export class IntentRouterAgent {
     const text = (prTitle + ' ' + prDescription).toLowerCase();
 
     if (
-      text.includes('security') || 
-      text.includes('vulnerability') || 
-      text.includes('auth') || 
-      text.includes('cve') || 
-      text.includes('injection') || 
+      text.includes('security') ||
+      text.includes('vulnerability') ||
+      text.includes('auth') ||
+      text.includes('cve') ||
+      text.includes('injection') ||
       text.includes('xss') ||
       text.includes('bypass')
     ) {
@@ -32,10 +32,10 @@ export class IntentRouterAgent {
     }
 
     if (
-      text.includes('perf') || 
-      text.includes('optimize') || 
-      text.includes('latency') || 
-      text.includes('speed') || 
+      text.includes('perf') ||
+      text.includes('optimize') ||
+      text.includes('latency') ||
+      text.includes('speed') ||
       text.includes('memory') ||
       text.includes('cache')
     ) {
@@ -44,12 +44,12 @@ export class IntentRouterAgent {
     }
 
     if (
-      text.includes('ui ') || 
-      text.includes('ui/') || 
-      text.includes('frontend') || 
-      text.includes('react') || 
-      text.includes('css') || 
-      text.includes('tailwind') || 
+      text.includes('ui ') ||
+      text.includes('ui/') ||
+      text.includes('frontend') ||
+      text.includes('react') ||
+      text.includes('css') ||
+      text.includes('tailwind') ||
       text.includes('component')
     ) {
       this.logger.log('Routing to FRONTEND persona based on keywords.');

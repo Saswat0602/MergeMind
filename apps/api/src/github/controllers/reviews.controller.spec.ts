@@ -24,13 +24,13 @@ jest.mock('@octokit/auth-app', () => {
 
 describe('ReviewsController', () => {
   let controller: ReviewsController;
-  let githubService: GithubService;
 
   const mockPrismaService = {};
+  const applyCommitPatchMock = jest
+    .fn()
+    .mockResolvedValue({ success: true, sha: 'mock-sha' });
   const mockGithubService = {
-    applyCommitPatch: jest
-      .fn()
-      .mockResolvedValue({ success: true, sha: 'mock-sha' }),
+    applyCommitPatch: applyCommitPatchMock,
   };
 
   beforeEach(async () => {
@@ -43,7 +43,6 @@ describe('ReviewsController', () => {
     }).compile();
 
     controller = module.get<ReviewsController>(ReviewsController);
-    githubService = module.get<GithubService>(GithubService);
   });
 
   describe('applyFix validation', () => {
@@ -78,7 +77,7 @@ describe('ReviewsController', () => {
       });
 
       expect(result).toEqual({ success: true, sha: 'mock-sha' });
-      expect(githubService.applyCommitPatch).toHaveBeenCalledWith(
+      expect(applyCommitPatchMock).toHaveBeenCalledWith(
         'pr-id',
         'src/main.ts',
         'const x = 42;\nconsole.log(x);',
