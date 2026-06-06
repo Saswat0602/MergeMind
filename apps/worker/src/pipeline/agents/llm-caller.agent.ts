@@ -55,6 +55,8 @@ export class LlmCallerAgent {
       } else if (peerSuccess) {
         return pPeer.value;
       } else {
+        this.logger.error(`Primary LLM error: ${(pResult as PromiseRejectedResult).reason?.message || (pResult as PromiseRejectedResult).reason}`);
+        this.logger.error(`Fallback LLM error: ${(pPeer as PromiseRejectedResult).reason?.message || (pPeer as PromiseRejectedResult).reason}`);
         throw new Error(`Both Consensus LLM calls failed.`);
       }
     }

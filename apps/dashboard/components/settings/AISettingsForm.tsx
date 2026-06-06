@@ -180,20 +180,22 @@ export function AISettingsForm({
         <SectionCard title="Model Selection" description="Primary model is used for all reviews. Fallback activates when primary is unavailable.">
           <div className="form-inner-grid">
             <FieldGroup label="Primary Model">
-              <Select value={primaryModel} onValueChange={setPrimaryModel}>
-                <SelectTrigger>{availableModels.find(m => m.id === primaryModel)?.name || 'Select model'}</SelectTrigger>
-                <SelectContent>
-                  {availableModels.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <input
+                type="text"
+                value={primaryModel}
+                onChange={e => setPrimaryModel(e.target.value)}
+                className="form-input"
+                placeholder="e.g. deepseek/deepseek-v4-flash:free"
+              />
             </FieldGroup>
             <FieldGroup label="Fallback Model">
-              <Select value={fallbackModel} onValueChange={setFallbackModel}>
-                <SelectTrigger>{availableModels.find(m => m.id === fallbackModel)?.name || 'Select model'}</SelectTrigger>
-                <SelectContent>
-                  {availableModels.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <input
+                type="text"
+                value={fallbackModel}
+                onChange={e => setFallbackModel(e.target.value)}
+                className="form-input"
+                placeholder="e.g. arcee-ai/trinity-large-thinking:free"
+              />
             </FieldGroup>
           </div>
         </SectionCard>
