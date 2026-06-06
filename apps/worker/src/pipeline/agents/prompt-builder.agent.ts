@@ -80,14 +80,15 @@ Your job is to review a Git Pull Request diff and provide:
 3. A list of constructive review comments focused on SECURITY, PERFORMANCE, and logic bugs.`;
       }
 
-      systemPrompt += `\n\nFor each issue, specify:
+    }
+
+    systemPrompt += `\n\nFor each issue, specify:
 - "filePath": Exact file path.
 - "lineNumber": The line number in the new file where the issue occurs (must be a modified/added line).
 - "content": Clear description of the issue.
 - "severity": "HIGH", "MEDIUM", or "LOW".
 - "type": "SECURITY", "PERFORMANCE", or "STYLE".
 - "suggestion": (Optional) A strict, direct drop-in code replacement snippet.`;
-    }
 
     systemPrompt += `${rulesPrompt}${jsonFormatInstructions}`;
 
