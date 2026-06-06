@@ -28,8 +28,11 @@ export function useDashboardData() {
         throw new Error('API server returned error code.');
       }
 
-      const statsData = await statsRes.json();
-      const prsData = await prsRes.json();
+      const statsRaw = await statsRes.json();
+      const prsRaw = await prsRes.json();
+
+      const statsData = statsRaw.success !== undefined ? statsRaw.data : statsRaw;
+      const prsData = prsRaw.success !== undefined ? prsRaw.data : prsRaw;
 
       setStats(statsData);
       

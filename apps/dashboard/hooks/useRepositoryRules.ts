@@ -18,7 +18,8 @@ export function useRepositoryRules() {
         setLoadingRepos(true);
         const res = await fetch('/api/dashboard/repositories');
         if (!res.ok) throw new Error('Failed to load repositories');
-        const data = await res.json();
+        const rawData = await res.json();
+        const data = rawData.success !== undefined ? rawData.data : rawData;
         setRepositories(data);
         if (data.length > 0) {
           setSelectedRepoId(data[0].id);
@@ -47,7 +48,8 @@ export function useRepositoryRules() {
         setLoadingRules(true);
         const res = await fetch(`/api/dashboard/repositories/${selectedRepoId}/rules`);
         if (!res.ok) throw new Error('Failed to load repository rules');
-        const data = await res.json();
+        const rawData = await res.json();
+        const data = rawData.success !== undefined ? rawData.data : rawData;
         setRules(data);
       } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
         console.error('Error fetching rules:', err);
@@ -75,7 +77,8 @@ export function useRepositoryRules() {
       });
 
       if (!res.ok) throw new Error('Failed to toggle rule state');
-      const updated = await res.json();
+      const updatedRaw = await res.json();
+      const updated = updatedRaw.success !== undefined ? updatedRaw.data : updatedRaw;
       
       // Sync from server
       setRules(prev => prev.map(r => (r.id === ruleId ? updated : r)));
@@ -107,7 +110,8 @@ export function useRepositoryRules() {
       });
 
       if (!res.ok) throw new Error('Failed to create new custom rule');
-      const newRule = await res.json();
+      const newRuleRaw = await res.json();
+      const newRule = newRuleRaw.success !== undefined ? newRuleRaw.data : newRuleRaw;
       setRules(prev => [...prev, newRule]);
       return true;
     } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any

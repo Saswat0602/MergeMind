@@ -31,7 +31,8 @@ Adopt a clean, direct, and constructive technical persona. Offer actionable, pro
       try {
         const res = await fetch('/api/settings');
         if (res.ok) {
-          const data = await res.json();
+          const dataRaw = await res.json();
+          const data = dataRaw.success !== undefined ? dataRaw.data : dataRaw;
           if (data.openRouterKey) setApiKey(data.openRouterKey);
           if (data.defaultModel) setPrimaryModel(data.defaultModel);
           if (data.fallbackModel) setFallbackModel(data.fallbackModel);
@@ -64,8 +65,9 @@ Adopt a clean, direct, and constructive technical persona. Offer actionable, pro
         }),
       });
 
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const dataRaw = await res.json();
+      const data = dataRaw.success !== undefined ? dataRaw.data : dataRaw;
+      if (res.ok && dataRaw.success !== false) {
         setTestResult('SUCCESS');
       } else {
         setTestResult('FAILED');
@@ -110,7 +112,8 @@ Adopt a clean, direct, and constructive technical persona. Offer actionable, pro
       });
 
       if (res.ok) {
-        const data = await res.json();
+        const dataRaw = await res.json();
+        const data = dataRaw.success !== undefined ? dataRaw.data : dataRaw;
         if (data.openRouterKey) setApiKey(data.openRouterKey);
         setSaveStatus('AI parameters stored securely in Prisma Database!');
       } else {

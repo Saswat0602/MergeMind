@@ -21,8 +21,8 @@ export function useReviewDetail(id: string) {
       if (!res.ok) {
         throw new Error('API server returned error code.');
       }
-      const data = await res.json();
-      setPr(data);
+      const rawData = await res.json();
+      setPr(rawData.success !== undefined ? rawData.data : rawData);
     } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       console.error('Could not fetch PR from API:', err);
       setError(err.message || 'Failed to fetch PR details');

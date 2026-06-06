@@ -23,7 +23,8 @@ export function useGitHubSettings() {
       try {
         const ghRes = await fetch('/api/settings/github');
         if (ghRes.ok) {
-          const ghData = await ghRes.json();
+          const ghDataRaw = await ghRes.json();
+          const ghData = ghDataRaw.success !== undefined ? ghDataRaw.data : ghDataRaw;
           if (ghData.appId) setGitHubAppId(ghData.appId);
           if (ghData.privateKey) setGitHubPrivateKey(ghData.privateKey);
           if (ghData.webhookSecret) setGitHubWebhookSecret(ghData.webhookSecret);
@@ -54,8 +55,9 @@ export function useGitHubSettings() {
         }),
       });
 
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const dataRaw = await res.json();
+      const data = dataRaw.success !== undefined ? dataRaw.data : dataRaw;
+      if (res.ok && dataRaw.success !== false) {
         setTestGitHubResult('SUCCESS');
       } else {
         setTestGitHubResult('FAILED');
@@ -94,7 +96,8 @@ export function useGitHubSettings() {
       });
 
       if (res.ok) {
-        const data = await res.json();
+        const dataRaw = await res.json();
+        const data = dataRaw.success !== undefined ? dataRaw.data : dataRaw;
         if (data.privateKey) setGitHubPrivateKey(data.privateKey);
         if (data.webhookSecret) setGitHubWebhookSecret(data.webhookSecret);
         if (data.clientSecret) setGitHubClientSecret(data.clientSecret);

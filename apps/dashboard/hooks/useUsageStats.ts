@@ -14,9 +14,10 @@ export function useUsageStats() {
       setError(null);
       const res = await fetch('/api/dashboard/usage');
       if (!res.ok) throw new Error('API server error');
-      const data = await res.json();
-      setLogs(data.logs);
-      setSummary(data.summary);
+      const rawData = await res.json();
+      const payload = rawData.success !== undefined ? rawData.data : rawData;
+      setLogs(payload.logs);
+      setSummary(payload.summary);
     } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       console.error('Could not fetch usage metrics from API:', err);
       setError(err.message || 'Failed to fetch usage metrics');
