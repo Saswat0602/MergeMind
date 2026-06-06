@@ -83,7 +83,7 @@ export function SseToast() {
             ? 'PR analysis finished successfully.'
             : isFailed
               ? latestEvent.error || 'An error occurred during analysis.'
-              : `Status: ${latestEvent.step.replace('_', ' ')}`}
+              : `Status: ${latestEvent.step?.replace('_', ' ') || 'Initializing...'}`}
         </p>
       </div>
       <button 
