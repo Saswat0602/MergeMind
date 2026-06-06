@@ -30,7 +30,6 @@ export function DashboardHeader({ refreshing, onRefresh }: DashboardHeaderProps)
           disabled={refreshing}
           className="btn btn-secondary"
         >
-          <IconRefresh spinning={refreshing} />
           {refreshing ? 'Syncing…' : 'Sync'}
         </button>
       </div>
