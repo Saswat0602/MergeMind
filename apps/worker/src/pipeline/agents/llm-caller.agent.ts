@@ -99,28 +99,42 @@ export class LlmCallerAgent {
     maxTokens: number,
   ) {
     const startTime = Date.now();
-    const response = await fetch(
-      'https://openrouter.ai/api/v1/chat/completions',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-          'HTTP-Referer': 'https://mergemind.dev',
-          'X-Title': 'MergeMind',
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minutes timeout
+
+    let response;
+    try {
+      response = await fetch(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+            'HTTP-Referer': 'https://mergemind.dev',
+            'X-Title': 'MergeMind',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+            response_format: { type: 'json_object' },
+            temperature,
+            max_tokens: maxTokens,
+          }),
+          signal: controller.signal,
         },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          response_format: { type: 'json_object' },
-          temperature,
-          max_tokens: maxTokens,
-        }),
-      },
-    );
+      );
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error(`Request timed out after 5 minutes`);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
