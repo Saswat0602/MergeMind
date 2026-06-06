@@ -182,45 +182,19 @@ model PromptTemplate {
   updatedAt DateTime @updatedAt
 }
 
-enum AiProvider {
-  OPENROUTER
-  OPENAI
-  ANTHROPIC
-  XAI
-  OLLAMA
-  BEDROCK
-}
-
 model AiSettings {
-  id                  String     @id @default(uuid())
-  provider            AiProvider @default(OPENROUTER)
-  openRouterKey       String?
-  openaiKey           String?
-  anthropicKey        String?
-  xaiKey              String?
-  baseUrl             String?    // Custom endpoint for Ollama or OpenAI compatible servers
-  
-  // AWS Bedrock Configuration
-  awsAccessKeyId      String?
-  awsSecretAccessKey  String?
-  awsRegion           String?
-  
-  primaryModel        String?
-  fallbackModel       String?
-  isFallbackEnabled   Boolean    @default(true)
-  isConsensusEnabled  Boolean    @default(false)
-  
-  // Cost Configuration (per 1 Million tokens)
-  isFreeApi           Boolean    @default(false)
-  costPer1mPrompt     Float      @default(0.0)
-  costPer1mCompletion Float      @default(0.0)
-  
-  temperature         Float      @default(0.1)
-  maxTokens           Int        @default(2048)
-  systemPrompt        String     @default("You are an elite, highly specialized Principal Engineer and Security Auditor. Your primary objective is to review Pull Request diffs with extreme rigor.\n\nFocus your analysis on the following critical dimensions:\n1. Security Vulnerabilities (OWASP Top 10)\n2. Performance Bottlenecks\n3. Architecture & Concurrency\n4. Code Quality & Reliability\n\nGuidelines for your review:\n- Be ruthless but constructive. Do not sugarcoat issues.\n- Provide Actionable Code.\n- Zero Fluff. Skip pleasantries. Do not compliment the code.\n- Context Awareness. Only comment on lines that were actually changed in the diff.") @db.Text
-  bypassSignature     Boolean    @default(true)
-  createdAt           DateTime   @default(now())
-  updatedAt           DateTime   @updatedAt
+  id                String   @id @default(uuid())
+  openRouterKey     String?
+  defaultModel      String   @default("deepseek/deepseek-v4-flash:free")
+  fallbackModel     String   @default("arcee-ai/trinity-large-thinking:free")
+  isFallbackEnabled Boolean  @default(true)
+  isConsensusEnabled Boolean @default(false)
+  temperature       Float    @default(0.1)
+  maxTokens         Int      @default(2048)
+  systemPrompt      String   @default("You are an elite, highly specialized AI code auditor. Analyze the pull request diff for:\n1. Critical security bugs and OWASP vulnerabilities.\n2. Major execution hotpaths and latency bottlenecks.\n3. Logical deadlocks, edge cases, and standard cleanups.\n\nAdopt a clean, direct, and constructive technical persona. Offer actionable, production-grade refactored code blocks in your responses.") @db.Text
+  bypassSignature   Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model GitHubSettings {
