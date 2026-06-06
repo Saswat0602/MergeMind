@@ -100,7 +100,7 @@ export class LlmCallerAgent {
   ) {
     const startTime = Date.now();
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minutes timeout
+    const timeoutId = setTimeout(() => controller.abort(), 2 * 60 * 1000); // 2 minutes timeout
 
     let response;
     try {
