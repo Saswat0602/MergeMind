@@ -205,9 +205,8 @@ model AiSettings {
   awsSecretAccessKey  String?
   awsRegion           String?
   
-  primaryModel        String?
-  fallbackModel       String?
-  isFallbackEnabled   Boolean    @default(true)
+  model               String?
+  
   isConsensusEnabled  Boolean    @default(false)
   
   // Cost Configuration (per 1 Million tokens)

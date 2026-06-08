@@ -17,11 +17,9 @@ export class SettingsResolverAgent {
     const encryptionKey = this.configService.get<string>('ENCRYPTION_KEY');
 
     let apiKey = this.configService.get<string>('OPENROUTER_API_KEY');
-    let primaryModel =
+    let model =
       this.configService.get<string>('AI_MODEL') ||
       'deepseek/deepseek-v4-flash:free';
-    let fallbackModel = 'arcee-ai/trinity-large-thinking:free';
-    let isFallbackEnabled = true;
     let isConsensusEnabled = false;
     let temperature = 0.1;
     let maxTokens = 30000;
@@ -37,9 +35,7 @@ export class SettingsResolverAgent {
           );
         }
       }
-      primaryModel = dbSettings.defaultModel || primaryModel;
-      fallbackModel = dbSettings.fallbackModel || fallbackModel;
-      isFallbackEnabled = dbSettings.isFallbackEnabled;
+      model = dbSettings.model || model;
       isConsensusEnabled = dbSettings.isConsensusEnabled;
       temperature = dbSettings.temperature ?? temperature;
       maxTokens = dbSettings.maxTokens ?? maxTokens;
@@ -52,9 +48,7 @@ export class SettingsResolverAgent {
 
     return {
       apiKey,
-      primaryModel,
-      fallbackModel,
-      isFallbackEnabled,
+      model,
       isConsensusEnabled,
       temperature,
       maxTokens,

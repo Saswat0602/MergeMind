@@ -25,6 +25,14 @@ export class SettingsService {
     }
   }
 
+  async getProviders() {
+    const { AiProvider } = await import('@prisma/client');
+    return {
+      success: true,
+      data: Object.values(AiProvider)
+    };
+  }
+
   /**
    * Retrieves the AI settings record. If none exists, creates and returns a default one.
    * @param decrypted If true, returns the decrypted API key. Otherwise returns masked version.
@@ -44,9 +52,7 @@ export class SettingsService {
         );
         settings = await this.prisma.aiSettings.create({
           data: {
-            defaultModel: 'deepseek/deepseek-v4-flash:free',
-            fallbackModel: 'arcee-ai/trinity-large-thinking:free',
-            isFallbackEnabled: true,
+            model: 'deepseek/deepseek-v4-flash:free',
             temperature: 0.1,
             maxTokens: 30000,
             bypassSignature: true,
@@ -63,19 +69,20 @@ export class SettingsService {
     }
 
     const response = { ...settings };
-
-    if (settings.openRouterKey) {
-      if (decrypted) {
-        response.openRouterKey = decrypt(
-          settings.openRouterKey,
-          this.encryptionKey,
-        );
-      } else {
-        response.openRouterKey = this.maskedPlaceholder;
+    
+    const handleDecryptOrMask = (val: string | null) => {
+      if (val) {
+        return decrypted ? decrypt(val, this.encryptionKey) : this.maskedPlaceholder;
       }
-    } else {
-      response.openRouterKey = '';
-    }
+      return '';
+    };
+
+    response.openRouterKey = handleDecryptOrMask(settings.openRouterKey);
+    response.openaiKey = handleDecryptOrMask(settings.openaiKey);
+    response.anthropicKey = handleDecryptOrMask(settings.anthropicKey);
+    response.xaiKey = handleDecryptOrMask(settings.xaiKey);
+    response.awsAccessKeyId = handleDecryptOrMask(settings.awsAccessKeyId);
+    response.awsSecretAccessKey = handleDecryptOrMask(settings.awsSecretAccessKey);
 
     return response;
   }
@@ -84,42 +91,47 @@ export class SettingsService {
    * Updates or inserts the AI settings.
    */
   async updateSettings(data: {
+    provider?: import('@prisma/client').AiProvider;
     openRouterKey?: string;
-    defaultModel?: string;
-    fallbackModel?: string;
-    isFallbackEnabled?: boolean;
+    openaiKey?: string;
+    anthropicKey?: string;
+    xaiKey?: string;
+    baseUrl?: string;
+    awsAccessKeyId?: string;
+    awsSecretAccessKey?: string;
+    awsRegion?: string;
+    model?: string;
+    isConsensusEnabled?: boolean;
+    isFreeApi?: boolean;
+    costPer1mPrompt?: number;
+    costPer1mCompletion?: number;
     temperature?: number;
     maxTokens?: number;
     systemPrompt?: string;
     bypassSignature?: boolean;
   }) {
     const existing = await this.prisma.aiSettings.findFirst();
-    const updateData: Omit<typeof data, 'openRouterKey'> & {
-      openRouterKey?: string | null;
-    } = {
-      ...data,
+    const updateData: any = { ...data };
+
+    const handleEncryptOrKeep = (inputVal: string | undefined, existingVal: string | null | undefined) => {
+      if (inputVal !== undefined) {
+        if (inputVal === this.maskedPlaceholder) {
+          return existingVal || null;
+        } else if (inputVal.trim() === '') {
+          return null;
+        } else {
+          return encrypt(inputVal.trim(), this.encryptionKey);
+        }
+      }
+      return undefined;
     };
 
-    // Handle OpenRouter API Key Encryption
-    if (data.openRouterKey !== undefined) {
-      if (data.openRouterKey === this.maskedPlaceholder) {
-        // Masked key, user did not modify it. Retain existing encrypted key.
-        if (existing) {
-          updateData.openRouterKey = existing.openRouterKey;
-        } else {
-          updateData.openRouterKey = null;
-        }
-      } else if (data.openRouterKey.trim() === '') {
-        // User cleared the key
-        updateData.openRouterKey = null;
-      } else {
-        // User entered a new key, encrypt it
-        updateData.openRouterKey = encrypt(
-          data.openRouterKey.trim(),
-          this.encryptionKey,
-        );
-      }
-    }
+    updateData.openRouterKey = handleEncryptOrKeep(data.openRouterKey, existing?.openRouterKey);
+    updateData.openaiKey = handleEncryptOrKeep(data.openaiKey, existing?.openaiKey);
+    updateData.anthropicKey = handleEncryptOrKeep(data.anthropicKey, existing?.anthropicKey);
+    updateData.xaiKey = handleEncryptOrKeep(data.xaiKey, existing?.xaiKey);
+    updateData.awsAccessKeyId = handleEncryptOrKeep(data.awsAccessKeyId, existing?.awsAccessKeyId);
+    updateData.awsSecretAccessKey = handleEncryptOrKeep(data.awsSecretAccessKey, existing?.awsSecretAccessKey);
 
     let result: import('@prisma/client').AiSettings;
     if (existing) {
@@ -131,11 +143,7 @@ export class SettingsService {
       result = await this.prisma.aiSettings.create({
         data: {
           ...updateData,
-          defaultModel:
-            updateData.defaultModel || 'deepseek/deepseek-v4-flash:free',
-          fallbackModel:
-            updateData.fallbackModel || 'arcee-ai/trinity-large-thinking:free',
-          isFallbackEnabled: updateData.isFallbackEnabled ?? true,
+          model: updateData.model || 'deepseek/deepseek-v4-flash:free',
           temperature: updateData.temperature ?? 0.1,
           maxTokens: updateData.maxTokens ?? 30000,
           bypassSignature: updateData.bypassSignature ?? true,
@@ -146,12 +154,15 @@ export class SettingsService {
     await this.redis.del('ai:settings:raw');
 
     // Return settings with masked key for security
-    const response = { ...result };
-    if (result.openRouterKey) {
-      response.openRouterKey = this.maskedPlaceholder;
-    } else {
-      response.openRouterKey = '';
-    }
+    const response = { ...result } as any;
+    const handleMask = (val: string | null) => val ? this.maskedPlaceholder : '';
+    
+    response.openRouterKey = handleMask(result.openRouterKey);
+    response.openaiKey = handleMask(result.openaiKey);
+    response.anthropicKey = handleMask(result.anthropicKey);
+    response.xaiKey = handleMask(result.xaiKey);
+    response.awsAccessKeyId = handleMask(result.awsAccessKeyId);
+    response.awsSecretAccessKey = handleMask(result.awsSecretAccessKey);
 
     return response;
   }

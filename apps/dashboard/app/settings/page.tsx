@@ -40,24 +40,9 @@ export default function SettingsPage() {
       <div>
         {activeTab === 'AI' ? (
           <AISettingsForm
-            apiKey={aiHook.apiKey}
-            setApiKey={aiHook.setApiKey}
-            showKey={aiHook.showKey}
-            setShowKey={aiHook.setShowKey}
-            primaryModel={aiHook.primaryModel}
-            setPrimaryModel={aiHook.setPrimaryModel}
-            fallbackModel={aiHook.fallbackModel}
-            setFallbackModel={aiHook.setFallbackModel}
-            temperature={aiHook.temperature}
-            setTemperature={aiHook.setTemperature}
-            maxTokens={aiHook.maxTokens}
-            setMaxTokens={aiHook.setMaxTokens}
-            systemPrompt={aiHook.systemPrompt}
-            setSystemPrompt={aiHook.setSystemPrompt}
-            bypassSignature={aiHook.bypassSignature}
-            setBypassSignature={aiHook.setBypassSignature}
-            isConsensusEnabled={aiHook.isConsensusEnabled}
-            setIsConsensusEnabled={aiHook.setIsConsensusEnabled}
+            data={aiHook.formData}
+            availableProviders={aiHook.availableProviders}
+            onChange={aiHook.handleChange}
             testing={aiHook.testing}
             testResult={aiHook.testResult}
             testErrorMessage={aiHook.testErrorMessage}

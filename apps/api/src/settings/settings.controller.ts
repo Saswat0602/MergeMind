@@ -12,14 +12,29 @@ export class SettingsController {
     return this.settingsService.getSettings(false);
   }
 
+  @Get('providers')
+  async getProviders() {
+    return this.settingsService.getProviders();
+  }
+
   @Post()
   async updateSettings(
     @Body()
     body: {
+      provider?: import('@prisma/client').AiProvider;
       openRouterKey?: string;
-      defaultModel?: string;
-      fallbackModel?: string;
-      isFallbackEnabled?: boolean;
+      openaiKey?: string;
+      anthropicKey?: string;
+      xaiKey?: string;
+      baseUrl?: string;
+      awsAccessKeyId?: string;
+      awsSecretAccessKey?: string;
+      awsRegion?: string;
+      model?: string;
+      isConsensusEnabled?: boolean;
+      isFreeApi?: boolean;
+      costPer1mPrompt?: number;
+      costPer1mCompletion?: number;
       temperature?: number;
       maxTokens?: number;
       systemPrompt?: string;

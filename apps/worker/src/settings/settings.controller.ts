@@ -15,9 +15,7 @@ export class SettingsController {
     @Body()
     body: {
       openRouterKey?: string;
-      defaultModel?: string;
-      fallbackModel?: string;
-      isFallbackEnabled?: boolean;
+      model?: string;
       temperature?: number;
       maxTokens?: number;
       systemPrompt?: string;

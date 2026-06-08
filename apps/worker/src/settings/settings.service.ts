@@ -44,9 +44,7 @@ export class SettingsService {
         );
         settings = await this.prisma.aiSettings.create({
           data: {
-            defaultModel: 'deepseek/deepseek-v4-flash:free',
-            fallbackModel: 'arcee-ai/trinity-large-thinking:free',
-            isFallbackEnabled: true,
+            model: 'deepseek/deepseek-v4-flash:free',
             temperature: 0.1,
             maxTokens: 30000,
             bypassSignature: true,
@@ -85,9 +83,7 @@ export class SettingsService {
    */
   async updateSettings(data: {
     openRouterKey?: string;
-    defaultModel?: string;
-    fallbackModel?: string;
-    isFallbackEnabled?: boolean;
+    model?: string;
     temperature?: number;
     maxTokens?: number;
     systemPrompt?: string;
@@ -127,11 +123,7 @@ export class SettingsService {
       result = await this.prisma.aiSettings.create({
         data: {
           ...updateData,
-          defaultModel:
-            updateData.defaultModel || 'deepseek/deepseek-v4-flash:free',
-          fallbackModel:
-            updateData.fallbackModel || 'arcee-ai/trinity-large-thinking:free',
-          isFallbackEnabled: updateData.isFallbackEnabled ?? true,
+          model: updateData.model || 'deepseek/deepseek-v4-flash:free',
           temperature: updateData.temperature ?? 0.1,
           maxTokens: updateData.maxTokens ?? 30000,
           bypassSignature: updateData.bypassSignature ?? true,

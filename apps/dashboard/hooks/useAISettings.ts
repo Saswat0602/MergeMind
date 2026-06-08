@@ -1,53 +1,100 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useReducer, useState } from 'react';
+import { AISettingsData } from '../types';
+
+type Action = 
+  | { type: 'SET_FIELD'; field: keyof AISettingsData; value: any }
+  | { type: 'SET_MULTIPLE'; payload: Partial<AISettingsData> };
+
+function settingsReducer(state: AISettingsData, action: Action): AISettingsData {
+  switch (action.type) {
+    case 'SET_FIELD': {
+      const newState = { ...state, [action.field]: action.value };
+      
+      // Edge Case 1: Clear irrelevant API credentials when Provider changes
+      if (action.field === 'provider') {
+        const p = action.value;
+        if (p !== 'OPENROUTER') newState.openRouterKey = '';
+        if (p !== 'OPENAI') newState.openaiKey = '';
+        if (p !== 'ANTHROPIC') newState.anthropicKey = '';
+        if (p !== 'XAI') newState.xaiKey = '';
+        if (p !== 'BEDROCK') {
+          newState.awsAccessKeyId = '';
+          newState.awsSecretAccessKey = '';
+          newState.awsRegion = '';
+        }
+        if (p !== 'OLLAMA' && p !== 'OPENAI') newState.baseUrl = '';
+      }
+      
+      // Edge Case 2: Reset costs to 0 if API is marked as free
+      if (action.field === 'isFreeApi' && action.value === true) {
+        newState.costPer1mPrompt = 0;
+        newState.costPer1mCompletion = 0;
+      }
+      
+      return newState;
+    }
+    case 'SET_MULTIPLE':
+      return { ...state, ...action.payload };
+    default:
+      return state;
+  }
+}
 
 export function useAISettings() {
-  const [apiKey, setApiKey] = useState('sk-or-v1-****************************************');
-  const [showKey, setShowKey] = useState(false);
-  const [primaryModel, setPrimaryModel] = useState('deepseek/deepseek-v4-flash:free');
-  const [fallbackModel, setFallbackModel] = useState('arcee-ai/trinity-large-thinking:free');
-  const [temperature, setTemperature] = useState(0.1);
-  const [maxTokens, setMaxTokens] = useState(2048);
-  const [systemPrompt, setSystemPrompt] = useState(
-    `You are an elite, highly specialized Principal Engineer and Security Auditor. Your primary objective is to review Pull Request diffs with extreme rigor.
+  const [formData, dispatch] = useReducer(settingsReducer, {
+    provider: 'OPENROUTER',
+    openRouterKey: '',
+    openaiKey: '',
+    anthropicKey: '',
+    xaiKey: '',
+    baseUrl: '',
+    awsAccessKeyId: '',
+    awsSecretAccessKey: '',
+    awsRegion: '',
+    showKey: false,
+    model: '',
+    isFreeApi: false,
+    costPer1mPrompt: 0.0,
+    costPer1mCompletion: 0.0,
+    temperature: 0.1,
+    maxTokens: 2048,
+    systemPrompt: `You are an elite, highly specialized Principal Engineer and Security Auditor. Your primary objective is to review Pull Request diffs with extreme rigor.\n\nFocus your analysis on the following critical dimensions:\n1. Security Vulnerabilities (OWASP Top 10): Identify SQL injections, XSS, SSRF, insecure direct object references, and sensitive data leaks.\n2. Performance Bottlenecks: Detect O(N^2) algorithms, unnecessary database queries (N+1), memory leaks, and inefficient loops.\n3. Architecture & Concurrency: Spot race conditions, deadlocks, improper state management, and tight coupling.\n4. Code Quality & Reliability: Highlight unhandled edge cases, missing null-checks, logic bugs, and fragile error handling.\n\nGuidelines for your review:\n- Be ruthless but constructive. Do not sugarcoat issues, but provide clear paths to resolution.\n- Provide Actionable Code. Whenever you find a flaw, offer a production-ready, highly optimized drop-in code snippet to fix it.\n- Zero Fluff. Skip pleasantries. Do not compliment the code. Go straight into technical analysis.\n- Context Awareness. Only comment on lines that were actually changed in the diff.`,
+    bypassSignature: true,
+    isConsensusEnabled: false,
+  });
 
-Focus your analysis on the following critical dimensions:
-1. Security Vulnerabilities (OWASP Top 10): Identify SQL injections, XSS, SSRF, insecure direct object references, and sensitive data leaks.
-2. Performance Bottlenecks: Detect O(N^2) algorithms, unnecessary database queries (N+1), memory leaks, and inefficient loops.
-3. Architecture & Concurrency: Spot race conditions, deadlocks, improper state management, and tight coupling.
-4. Code Quality & Reliability: Highlight unhandled edge cases, missing null-checks, logic bugs, and fragile error handling.
-
-Guidelines for your review:
-- Be ruthless but constructive. Do not sugarcoat issues, but provide clear paths to resolution.
-- Provide Actionable Code. Whenever you find a flaw, offer a production-ready, highly optimized drop-in code snippet to fix it.
-- Zero Fluff. Skip pleasantries. Do not compliment the code. Go straight into technical analysis.
-- Context Awareness. Only comment on lines that were actually changed in the diff.`
-  );
-  const [bypassSignature, setBypassSignature] = useState(true);
-  const [isConsensusEnabled, setIsConsensusEnabled] = useState(false);
-
-  // Interaction / Loading states
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'SUCCESS' | 'FAILED' | null>(null);
   const [testErrorMessage, setTestErrorMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  
+  const [availableProviders, setAvailableProviders] = useState<string[]>([]);
+
+  const handleChange = (field: keyof AISettingsData, value: any) => {
+    dispatch({ type: 'SET_FIELD', field, value });
+  };
 
   // Fetch settings from database on mount
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const res = await fetch('/api/settings');
-        if (res.ok) {
-          const dataRaw = await res.json();
+        const [settingsRes, providersRes] = await Promise.all([
+          fetch('/api/settings'),
+          fetch('/api/settings/providers')
+        ]);
+        
+        if (providersRes.ok) {
+          const pData = await providersRes.json();
+          if (pData.success && pData.data) {
+            setAvailableProviders(pData.data);
+          }
+        }
+
+        if (settingsRes.ok) {
+          const dataRaw = await settingsRes.json();
           const data = dataRaw.success !== undefined ? dataRaw.data : dataRaw;
-          if (data.openRouterKey) setApiKey(data.openRouterKey);
-          if (data.defaultModel) setPrimaryModel(data.defaultModel);
-          if (data.fallbackModel) setFallbackModel(data.fallbackModel);
-          if (data.temperature !== undefined) setTemperature(data.temperature);
-          if (data.maxTokens !== undefined) setMaxTokens(data.maxTokens);
-          if (data.systemPrompt) setSystemPrompt(data.systemPrompt);
-          if (data.bypassSignature !== undefined) setBypassSignature(data.bypassSignature);
-          if (data.isConsensusEnabled !== undefined) setIsConsensusEnabled(data.isConsensusEnabled);
+          dispatch({ type: 'SET_MULTIPLE', payload: data });
         }
       } catch (err) {
         console.error('Failed to load configurations from backend:', err);
@@ -68,7 +115,11 @@ Guidelines for your review:
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          openRouterKey: apiKey,
+          provider: formData.provider,
+          openRouterKey: formData.openRouterKey,
+          openaiKey: formData.openaiKey,
+          anthropicKey: formData.anthropicKey,
+          xaiKey: formData.xaiKey,
         }),
       });
 
@@ -100,28 +151,19 @@ Guidelines for your review:
     setSaveStatus(null);
     
     try {
+      const { showKey, ...saveData } = formData;
       const res = await fetch('/api/settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          openRouterKey: apiKey,
-          defaultModel: primaryModel,
-          fallbackModel: fallbackModel,
-          temperature,
-          maxTokens,
-          systemPrompt,
-          bypassSignature,
-          isFallbackEnabled: true,
-          isConsensusEnabled,
-        }),
+        body: JSON.stringify(saveData),
       });
 
       if (res.ok) {
         const dataRaw = await res.json();
         const data = dataRaw.success !== undefined ? dataRaw.data : dataRaw;
-        if (data.openRouterKey) setApiKey(data.openRouterKey);
+        dispatch({ type: 'SET_MULTIPLE', payload: data });
         setSaveStatus('AI parameters stored securely in Prisma Database!');
       } else {
         const data = await res.json();
@@ -138,29 +180,14 @@ Guidelines for your review:
   };
 
   return {
-    apiKey,
-    showKey,
-    primaryModel,
-    fallbackModel,
-    temperature,
-    maxTokens,
-    systemPrompt,
-    bypassSignature,
-    isConsensusEnabled,
+    formData,
+    handleChange,
+    availableProviders,
     testing,
     testResult,
     testErrorMessage,
     saving,
     saveStatus,
-    setApiKey,
-    setShowKey,
-    setPrimaryModel,
-    setFallbackModel,
-    setTemperature,
-    setMaxTokens,
-    setSystemPrompt,
-    setBypassSignature,
-    setIsConsensusEnabled,
     handleTestConnection,
     handleSave,
   };

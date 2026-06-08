@@ -13,13 +13,11 @@ export class LlmCallerAgent {
 
     // Consensus execution
     if (settings.isConsensusEnabled) {
-      this.logger.log(
-        `Dispatching concurrent audits: ${settings.primaryModel} + ${settings.fallbackModel}`,
-      );
+      this.logger.log(`Dispatching concurrent audits using ${settings.model} for consensus`);
       const [pResult, pPeer] = await Promise.allSettled([
         this.executeSingleCall(
           settings.apiKey,
-          settings.primaryModel,
+          settings.model,
           systemPrompt,
           userPrompt,
           settings.temperature,
@@ -27,7 +25,7 @@ export class LlmCallerAgent {
         ),
         this.executeSingleCall(
           settings.apiKey,
-          settings.fallbackModel,
+          settings.model,
           systemPrompt,
           userPrompt,
           settings.temperature,
@@ -47,7 +45,7 @@ export class LlmCallerAgent {
           promptTokens: res1.promptTokens + res2.promptTokens,
           completionTokens: res1.completionTokens + res2.completionTokens,
           latencyMs: Math.max(res1.latencyMs, res2.latencyMs),
-          modelUsed: `${settings.primaryModel} + ${settings.fallbackModel}`,
+          modelUsed: `${settings.model} (Consensus x2)`,
           logIds: [...res1.logIds, ...res2.logIds],
         };
       } else if (primarySuccess) {
@@ -64,29 +62,15 @@ export class LlmCallerAgent {
     try {
       return await this.executeSingleCall(
         settings.apiKey,
-        settings.primaryModel,
+        settings.model,
         systemPrompt,
         userPrompt,
         settings.temperature,
         settings.maxTokens,
       );
     } catch (err: any) {
-      if (!settings.isFallbackEnabled) {
-        throw new Error(
-          `Primary LLM failed and fallback is disabled: ${err.message}`,
-        );
-      }
-      this.logger.warn(
-        `Primary LLM failed: ${err.message}. Retrying with fallback: ${settings.fallbackModel}`,
-      );
-      return await this.executeSingleCall(
-        settings.apiKey,
-        settings.fallbackModel,
-        systemPrompt,
-        userPrompt,
-        settings.temperature,
-        settings.maxTokens,
-      );
+      this.logger.error(`LLM failed: ${err.message}`);
+      throw new Error(`LLM Execution Failed: ${err.message}`);
     }
   }
 

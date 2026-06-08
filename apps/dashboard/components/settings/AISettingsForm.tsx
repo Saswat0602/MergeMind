@@ -1,25 +1,7 @@
 import React from 'react';
 import { Select, SelectTrigger, SelectContent, SelectItem } from '../ui/select';
-import { AIModel } from '../../types';
-
-interface AISettingsFormProps {
-  apiKey: string; setApiKey: (val: string) => void;
-  showKey: boolean; setShowKey: (val: boolean) => void;
-  primaryModel: string; setPrimaryModel: (val: string) => void;
-  fallbackModel: string; setFallbackModel: (val: string) => void;
-  temperature: number; setTemperature: (val: number) => void;
-  maxTokens: number; setMaxTokens: (val: number) => void;
-  systemPrompt: string; setSystemPrompt: (val: string) => void;
-  bypassSignature: boolean; setBypassSignature: (val: boolean) => void;
-  isConsensusEnabled: boolean; setIsConsensusEnabled: (val: boolean) => void;
-  testing: boolean;
-  testResult: 'SUCCESS' | 'FAILED' | null;
-  testErrorMessage: string;
-  saving: boolean;
-  saveStatus: string | null;
-  handleTestConnection: () => void;
-  handleSave: (e: React.FormEvent) => void;
-}
+import { Eye, EyeOff } from 'lucide-react';
+import { AISettingsFormProps } from '../../types';
 
 // ── Shared primitives ────────────────────────────────────────
 function SectionCard({ title, description, children }: {
@@ -55,18 +37,7 @@ function EyeToggle({ show, onToggle }: { show: boolean; onToggle: () => void }) 
         color: 'var(--text-secondary)', padding: 4, display: 'flex', alignItems: 'center',
       }}
     >
-      {show ? (
-        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-        </svg>
-      ) : (
-        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-        </svg>
-      )}
+      {show ? <Eye size={15} /> : <EyeOff size={15} />}
     </button>
   );
 }
@@ -111,45 +82,113 @@ function ToggleRow({ label, description, on, onToggle }: {
 
 // ── Main component ────────────────────────────────────────────
 export function AISettingsForm({
-  apiKey, setApiKey, showKey, setShowKey,
-  primaryModel, setPrimaryModel, fallbackModel, setFallbackModel,
-  temperature, setTemperature, maxTokens, setMaxTokens,
-  systemPrompt, setSystemPrompt,
-  bypassSignature, setBypassSignature,
-  isConsensusEnabled, setIsConsensusEnabled,
+  data,
+  availableProviders,
+  onChange,
   testing, testResult, testErrorMessage,
   saving, saveStatus,
   handleTestConnection, handleSave,
 }: AISettingsFormProps) {
 
-  const availableModels: AIModel[] = [
-    { id: 'deepseek/deepseek-v4-flash:free', name: 'DeepSeek V4 Flash (Free)', provider: 'DeepSeek', tier: 'free', contextLength: '128k' },
-    { id: 'arcee-ai/trinity-large-thinking:free', name: 'Arcee Trinity Large Thinking (Free)', provider: 'Arcee AI', tier: 'free', contextLength: '64k' },
-    { id: 'google/gemini-2.5-flash:free', name: 'Gemini 2.5 Flash (Free)', provider: 'Google', tier: 'free', contextLength: '1m' },
-    { id: 'qwen/qwen-2.5-coder-32b-instruct:free', name: 'Qwen 2.5 Coder 32B (Free)', provider: 'Alibaba', tier: 'free', contextLength: '32k' },
-    { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B Instruct (Free)', provider: 'Meta', tier: 'free', contextLength: '128k' },
-  ];
+
 
   return (
     <form onSubmit={handleSave} className="settings-form-grid">
       {/* Left column */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {/* API Key */}
-        <SectionCard title="OpenRouter API Key" description="Your OpenRouter API token used to access LLM models.">
-          <FieldGroup label="API Key">
-            <div style={{ position: 'relative' }}>
-              <input
-                type={showKey ? 'text' : 'password'}
-                value={apiKey}
-                onChange={e => setApiKey(e.target.value)}
-                className="form-input"
-                style={{ fontFamily: 'monospace', fontSize: 12, paddingRight: 36 }}
-                placeholder="sk-or-v1-..."
-              />
-              <EyeToggle show={showKey} onToggle={() => setShowKey(!showKey)} />
-            </div>
+        {/* Connection Credentials */}
+        <SectionCard title="Connection Credentials" description="Select an AI Provider and configure credentials.">
+          <FieldGroup label="AI Provider">
+            <Select value={data.provider} onValueChange={(v) => onChange('provider', v)}>
+              <SelectTrigger>
+                {data.provider}
+              </SelectTrigger>
+              <SelectContent>
+                {availableProviders?.length > 0 ? (
+                  availableProviders.map((p) => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))
+                ) : (
+                  <>
+                    <SelectItem value="OPENROUTER">OPENROUTER</SelectItem>
+                    <SelectItem value="OPENAI">OPENAI</SelectItem>
+                    <SelectItem value="ANTHROPIC">ANTHROPIC</SelectItem>
+                    <SelectItem value="XAI">XAI</SelectItem>
+                    <SelectItem value="OLLAMA">OLLAMA</SelectItem>
+                    <SelectItem value="BEDROCK">BEDROCK</SelectItem>
+                  </>
+                )}
+              </SelectContent>
+            </Select>
           </FieldGroup>
+
+          {data.provider === 'OPENROUTER' && (
+            <FieldGroup label="OpenRouter API Key">
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={data.showKey ? 'text' : 'password'}
+                  value={data.openRouterKey}
+                  onChange={e => onChange('openRouterKey', e.target.value)}
+                  className="form-input"
+                  style={{ fontFamily: 'monospace', fontSize: 12, paddingRight: 36 }}
+                  placeholder="sk-or-v1-..."
+                />
+                <EyeToggle show={data.showKey} onToggle={() => onChange('showKey', !data.showKey)} />
+              </div>
+            </FieldGroup>
+          )}
+
+          {data.provider === 'OPENAI' && (
+            <FieldGroup label="OpenAI API Key">
+              <div style={{ position: 'relative' }}>
+                <input type={data.showKey ? 'text' : 'password'} value={data.openaiKey} onChange={e => onChange('openaiKey', e.target.value)} className="form-input" style={{ fontFamily: 'monospace', fontSize: 12, paddingRight: 36 }} placeholder="sk-proj-..." />
+                <EyeToggle show={data.showKey} onToggle={() => onChange('showKey', !data.showKey)} />
+              </div>
+            </FieldGroup>
+          )}
+
+          {data.provider === 'ANTHROPIC' && (
+            <FieldGroup label="Anthropic API Key">
+              <div style={{ position: 'relative' }}>
+                <input type={data.showKey ? 'text' : 'password'} value={data.anthropicKey} onChange={e => onChange('anthropicKey', e.target.value)} className="form-input" style={{ fontFamily: 'monospace', fontSize: 12, paddingRight: 36 }} placeholder="sk-ant-..." />
+                <EyeToggle show={data.showKey} onToggle={() => onChange('showKey', !data.showKey)} />
+              </div>
+            </FieldGroup>
+          )}
+
+          {data.provider === 'XAI' && (
+            <FieldGroup label="xAI API Key">
+              <div style={{ position: 'relative' }}>
+                <input type={data.showKey ? 'text' : 'password'} value={data.xaiKey} onChange={e => onChange('xaiKey', e.target.value)} className="form-input" style={{ fontFamily: 'monospace', fontSize: 12, paddingRight: 36 }} placeholder="xai-..." />
+                <EyeToggle show={data.showKey} onToggle={() => onChange('showKey', !data.showKey)} />
+              </div>
+            </FieldGroup>
+          )}
+
+          {(data.provider === 'OLLAMA' || data.provider === 'OPENAI') && (
+            <FieldGroup label={data.provider === 'OLLAMA' ? "Ollama Base URL" : "Custom Base URL (Optional)"}>
+              <input type="text" value={data.baseUrl} onChange={e => onChange('baseUrl', e.target.value)} className="form-input" placeholder={data.provider === 'OLLAMA' ? "http://localhost:11434/api/chat" : "https://api.openai.com/v1"} />
+            </FieldGroup>
+          )}
+
+          {data.provider === 'BEDROCK' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <FieldGroup label="AWS Access Key ID">
+                <input type="text" value={data.awsAccessKeyId} onChange={e => onChange('awsAccessKeyId', e.target.value)} className="form-input" />
+              </FieldGroup>
+              <FieldGroup label="AWS Secret Access Key">
+                <div style={{ position: 'relative' }}>
+                  <input type={data.showKey ? 'text' : 'password'} value={data.awsSecretAccessKey} onChange={e => onChange('awsSecretAccessKey', e.target.value)} className="form-input" style={{ paddingRight: 36 }} />
+                  <EyeToggle show={data.showKey} onToggle={() => onChange('showKey', !data.showKey)} />
+                </div>
+              </FieldGroup>
+              <FieldGroup label="AWS Region">
+                <input type="text" value={data.awsRegion} onChange={e => onChange('awsRegion', e.target.value)} className="form-input" placeholder="us-east-1" />
+              </FieldGroup>
+            </div>
+          )}
+
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button
               type="button"
@@ -176,35 +215,11 @@ export function AISettingsForm({
           </div>
         </SectionCard>
 
-        {/* Models */}
-        <SectionCard title="Model Selection" description="Primary model is used for all reviews. Fallback activates when primary is unavailable.">
-          <div className="form-inner-grid">
-            <FieldGroup label="Primary Model">
-              <input
-                type="text"
-                value={primaryModel}
-                onChange={e => setPrimaryModel(e.target.value)}
-                className="form-input"
-                placeholder="e.g. deepseek/deepseek-v4-flash:free"
-              />
-            </FieldGroup>
-            <FieldGroup label="Fallback Model">
-              <input
-                type="text"
-                value={fallbackModel}
-                onChange={e => setFallbackModel(e.target.value)}
-                className="form-input"
-                placeholder="e.g. arcee-ai/trinity-large-thinking:free"
-              />
-            </FieldGroup>
-          </div>
-        </SectionCard>
-
         {/* System prompt */}
         <SectionCard title="System Prompt" description="Custom instructions that shape how the AI structures its code review output.">
           <textarea
-            value={systemPrompt}
-            onChange={e => setSystemPrompt(e.target.value)}
+            value={data.systemPrompt}
+            onChange={e => onChange('systemPrompt', e.target.value)}
             rows={6}
             className="form-input"
             style={{ resize: 'vertical', lineHeight: 1.6, fontSize: 13 }}
@@ -217,19 +232,28 @@ export function AISettingsForm({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         {/* Sliders */}
-        <SectionCard title="Execution Parameters" description="Tune temperature and token limits.">
+        <SectionCard title="Execution Parameters" description="Define the target model and tune token limits.">
+          <FieldGroup label="Model Name">
+            <input
+              type="text"
+              value={data.model || ''}
+              onChange={e => onChange('model', e.target.value)}
+              className="form-input"
+              placeholder="e.g. gpt-4o or meta-llama/llama-3-70b"
+            />
+          </FieldGroup>
           {/* Temperature */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span className="form-label" style={{ margin: 0 }}>Temperature</span>
               <span style={{ fontSize: 13, fontWeight: 600, fontFamily: 'monospace', color: '#818cf8' }}>
-                {temperature}
+                {data.temperature}
               </span>
             </div>
             <input
               type="range" min="0" max="1" step="0.05"
-              value={temperature}
-              onChange={e => setTemperature(parseFloat(e.target.value))}
+              value={data.temperature}
+              onChange={e => onChange('temperature', parseFloat(e.target.value))}
               style={{ width: '100%', accentColor: 'var(--accent)', cursor: 'pointer' }}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-muted)' }}>
@@ -242,13 +266,13 @@ export function AISettingsForm({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span className="form-label" style={{ margin: 0 }}>Max Tokens</span>
               <span style={{ fontSize: 13, fontWeight: 600, fontFamily: 'monospace', color: '#818cf8' }}>
-                {maxTokens}
+                {data.maxTokens}
               </span>
             </div>
             <input
               type="range" min="256" max="4096" step="128"
-              value={maxTokens}
-              onChange={e => setMaxTokens(parseInt(e.target.value))}
+              value={data.maxTokens}
+              onChange={e => onChange('maxTokens', parseInt(e.target.value))}
               style={{ width: '100%', accentColor: 'var(--accent)', cursor: 'pointer' }}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-muted)' }}>
@@ -262,23 +286,51 @@ export function AISettingsForm({
           <ToggleRow
             label="Bypass Webhook Signature"
             description="Skip HMAC validation in dev mode"
-            on={bypassSignature}
-            onToggle={() => setBypassSignature(!bypassSignature)}
+            on={data.bypassSignature}
+            onToggle={() => onChange('bypassSignature', !data.bypassSignature)}
           />
           <ToggleRow
             label="Dual-Model Consensus"
             description="Run two models concurrently to deduplicate findings"
-            on={isConsensusEnabled}
-            onToggle={() => setIsConsensusEnabled(!isConsensusEnabled)}
+            on={data.isConsensusEnabled}
+            onToggle={() => onChange('isConsensusEnabled', !data.isConsensusEnabled)}
           />
-          <div style={{
-            padding: '10px 12px',
-            background: 'var(--accent-dim)',
-            border: '1px solid rgba(99,102,241,0.2)',
-            borderRadius: 7, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5,
-          }}>
-            Free tier models have no USD cost deducted from your balance.
-          </div>
+        </SectionCard>
+
+        {/* Cost Configuration */}
+        <SectionCard title="Cost Configuration" description="Set dynamic costs to accurately track LLM token usage.">
+          <ToggleRow
+            label="Free API Tier"
+            description="Toggle this if your API is free so no costs are calculated."
+            on={data.isFreeApi}
+            onToggle={() => onChange('isFreeApi', !data.isFreeApi)}
+          />
+          {!data.isFreeApi && (
+            <div className="form-inner-grid" style={{ marginTop: 8 }}>
+              <FieldGroup label="Cost per 1M Prompt Tokens ($)">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={data.costPer1mPrompt}
+                  onChange={e => onChange('costPer1mPrompt', parseFloat(e.target.value))}
+                  className="form-input"
+                  placeholder="e.g. 0.15"
+                />
+              </FieldGroup>
+              <FieldGroup label="Cost per 1M Completion Tokens ($)">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={data.costPer1mCompletion}
+                  onChange={e => onChange('costPer1mCompletion', parseFloat(e.target.value))}
+                  className="form-input"
+                  placeholder="e.g. 0.60"
+                />
+              </FieldGroup>
+            </div>
+          )}
         </SectionCard>
 
         {/* Save */}

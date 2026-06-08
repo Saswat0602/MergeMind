@@ -137,3 +137,38 @@ export interface RepositoryRule {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface AISettingsData {
+  provider: string;
+  openRouterKey: string;
+  openaiKey: string;
+  anthropicKey: string;
+  xaiKey: string;
+  baseUrl: string;
+  awsAccessKeyId: string;
+  awsSecretAccessKey: string;
+  awsRegion: string;
+  showKey: boolean;
+  model: string;
+  isFreeApi: boolean;
+  costPer1mPrompt: number;
+  costPer1mCompletion: number;
+  temperature: number;
+  maxTokens: number;
+  systemPrompt: string;
+  bypassSignature: boolean;
+  isConsensusEnabled: boolean;
+}
+
+export interface AISettingsFormProps {
+  data: AISettingsData;
+  availableProviders: string[];
+  onChange: (field: keyof AISettingsData, value: any) => void;
+  testing: boolean;
+  testResult: 'SUCCESS' | 'FAILED' | null;
+  testErrorMessage: string;
+  saving: boolean;
+  saveStatus: string | null;
+  handleTestConnection: () => void;
+  handleSave: (e: React.FormEvent) => void;
+}
